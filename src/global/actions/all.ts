@@ -4,6 +4,7 @@ import './api/messages';
 import './api/symbols';
 import './api/globalSearch';
 import './api/middleSearch';
+import './api/xydrive';
 import './api/management';
 import './api/sync';
 import './api/accounts';

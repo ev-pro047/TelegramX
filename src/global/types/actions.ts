@@ -414,6 +414,7 @@ export interface ActionPayloads {
   toggleChatInfo: ({ force?: boolean } & WithTabId) | undefined;
   openXydrive: WithTabId | undefined;
   closeXydrive: WithTabId | undefined;
+  loadXydrivePage: WithTabId | undefined;
   setIsUiReady: {
     uiReadyState: 0 | 1 | 2;
   } & WithTabId;

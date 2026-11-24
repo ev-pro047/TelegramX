@@ -81,6 +81,7 @@ import type {
   WalletBackupError,
 } from '../../api/types';
 import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
+import type { XydriveState } from '../../lib/xydrive/types';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type {
@@ -226,6 +227,7 @@ export type TabState = {
   canInstall?: boolean;
   isStatisticsShown?: boolean;
   xydriveOwnerId?: string;
+  xydrive?: XydriveState;
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;
   uiReadyState: 0 | 1 | 2;

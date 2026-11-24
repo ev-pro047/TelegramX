@@ -3585,6 +3585,22 @@ export interface LangPair {
   'XydriveWelcome': undefined;
   'XydriveFoundationDesc': undefined;
   'XydriveOpenSaved': undefined;
+  'XydriveSavedFiles': undefined;
+  'XydriveHistoryDesc': undefined;
+  'XydriveImages': undefined;
+  'XydriveVideos': undefined;
+  'XydriveAudio': undefined;
+  'XydriveDocuments': undefined;
+  'XydriveArchives': undefined;
+  'XydriveOther': undefined;
+  'XydriveUnknownSize': undefined;
+  'XydriveWait': undefined;
+  'XydriveLoadError': undefined;
+  'XydriveNoFilesYet': undefined;
+  'XydriveEmpty': undefined;
+  'XydriveEnd': undefined;
+  'XydriveRetry': undefined;
+  'XydriveLoadMore': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
