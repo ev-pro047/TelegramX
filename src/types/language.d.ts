@@ -3578,6 +3578,8 @@ export interface LangPair {
   'SettingsKeywordsLogOut': undefined;
   'SettingsKeywordsShortcuts': undefined;
   'SettingsSearchEmpty': undefined;
+  'XydriveTransferQueueFull': undefined;
+  'XydriveTransferCancelAll': undefined;
   'XydriveTransfers': undefined;
   'XydriveUpload': undefined;
   'XydriveDrop': undefined;

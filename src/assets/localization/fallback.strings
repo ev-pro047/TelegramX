@@ -4843,3 +4843,6 @@
 "XydriveTransferDownloadSelected" = "Download selected";
 "XydriveTransferDuplicate" = "A matching filename is already loaded in this folder. Telegram allows both copies. Continue?";
 "XydriveTransferLimit" = "Up to 100 queued or active transfers per tab session.";
+
+"XydriveTransferQueueFull" = "Transfer queue is full. Wait for a transfer to finish.";
+"XydriveTransferCancelAll" = "Cancel all";

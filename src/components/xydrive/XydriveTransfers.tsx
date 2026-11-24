@@ -5,7 +5,7 @@ import type { XydriveFile } from '../../lib/xydrive/types';
 import type { RegularLangKey } from '../../types/language';
 
 import {
-  cancelXydriveTransfer, clearXydriveTransferHistory, enqueueXydriveUploads, getXydriveTransfers,
+  cancelAllXydriveTransfers, cancelXydriveTransfer, clearXydriveTransferHistory, enqueueXydriveUploads, getXydriveTransfers,
   isActiveTransfer, retryXydriveTransfer, subscribeXydriveTransfers,
 } from '../../lib/xydrive/transfers';
 import { formatFileSize } from '../../util/text/textFormat';
@@ -44,7 +44,7 @@ type OwnProps = { ownerId?: string; files: readonly XydriveFile[] };
 const XydriveTransfers = ({ ownerId, files }: OwnProps) => {
   const lang = useLang();
   const picker = useRef<HTMLInputElement>();
-  const [rows, setRows] = useState(getXydriveTransfers(ownerId));
+  const [rows, setRows] = useState(() => getXydriveTransfers(ownerId));
   const [filter, setFilter] = useState<Filter>('all');
   const [expanded, setExpanded] = useState(true);
   const [dragging, setDragging] = useState(false);
@@ -136,6 +136,11 @@ const XydriveTransfers = ({ ownerId, files }: OwnProps) => {
                 {lang(label)}
               </button>
             ))}
+            {active > 0 && (
+              <Button size="tiny" color="translucent" onClick={() => cancelAllXydriveTransfers(ownerId)}>
+                {lang('XydriveTransferCancelAll')}
+              </Button>
+            )}
             <Button size="tiny" color="translucent" onClick={() => clearXydriveTransferHistory(ownerId)}>
               {lang('XydriveTransferClear')}
             </Button>
@@ -150,6 +155,7 @@ const XydriveTransfers = ({ ownerId, files }: OwnProps) => {
                     {row.direction === 'upload' ? '↑' : '↓'} {lang(STATUS[row.status])}
                     {row.size !== undefined ? ` · ${formatFileSize(lang, row.size)}` : ''}
                   </span>
+                  <span className={styles.meta} dir="auto">{row.destinationName || lang('XydriveRoot')}</span>
                   {row.progress !== undefined && isActiveTransfer(row.status) && (
                     <progress className={styles.progress} max={1} value={row.progress} />
                   )}

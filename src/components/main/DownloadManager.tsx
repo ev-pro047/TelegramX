@@ -20,7 +20,8 @@ type StateProps = {
 
 const GLOBAL_UPDATE_DEBOUNCE = 1000;
 
-const processedHashes = new Set<string>();
+const processedHashes = new Map<string, TabState['activeDownloads'][string]>();
+const trackedCancellations = new Map<string, () => void>();
 const downloadedHashes = new Set<string>();
 
 const DownloadManager = ({
@@ -41,31 +42,37 @@ const DownloadManager = ({
   });
 
   useEffect(() => {
-    if (!Object.keys(activeDownloads).length) {
-      processedHashes.clear();
-      return;
-    }
-
-    processedHashes.forEach((hash) => {
-      if (!activeDownloads[hash]) processedHashes.delete(hash);
+    processedHashes.forEach((metadata, hash) => {
+      if (activeDownloads[hash] === metadata) return;
+      processedHashes.delete(hash);
+      trackedCancellations.get(hash)?.();
+      trackedCancellations.delete(hash);
     });
 
     Object.entries(activeDownloads).forEach(([mediaHash, metadata]) => {
-      if (processedHashes.has(mediaHash)) {
-        return;
-      }
-      processedHashes.add(mediaHash);
+      if (processedHashes.get(mediaHash) === metadata) return;
+      processedHashes.set(mediaHash, metadata);
 
       const observer = getXydriveDownloadObserver(mediaHash);
       const isStillActive = () => selectTabState(getGlobal()).activeDownloads[mediaHash] === metadata;
+      const finish = (event: 'handedOff' | 'failed') => {
+        if (!observer) {
+          handleMediaDownloaded(mediaHash);
+          return;
+        }
+        if (!isStillActive() || getXydriveDownloadObserver(mediaHash) !== observer) return;
+        trackedCancellations.delete(mediaHash);
+        // Remove this specific native download before exposing the retry control.
+        cancelMediaHashDownloads({ mediaHashes: [mediaHash] });
+        observer(event);
+      };
       const { size, filename, format: mediaFormat } = metadata;
 
       const mediaData = mediaLoader.getFromMemory(mediaHash);
 
       if (mediaData) {
         download(mediaData, filename);
-        observer?.('handedOff');
-        handleMediaDownloaded(mediaHash);
+        finish('handedOff');
         return;
       }
 
@@ -73,51 +80,52 @@ const DownloadManager = ({
         showNotification({
           message: { key: 'DownloadSizeUnsupported' },
         });
-        observer?.('failed');
-        handleMediaDownloaded(mediaHash);
+        finish('failed');
         return;
       }
 
       const handleProgress = (progress: number) => {
         const currentDownloads = selectTabState(getGlobal()).activeDownloads;
-        if (!currentDownloads[mediaHash]) {
+        if (!currentDownloads[mediaHash] || (observer && !isStillActive())) {
           mediaLoader.cancelProgress(handleProgress);
-          observer?.('canceled');
+          if (observer && getXydriveDownloadObserver(mediaHash) === observer) observer('canceled');
         } else {
           observer?.('progress', progress);
         }
       };
 
+      if (observer) {
+        trackedCancellations.set(mediaHash, () => {
+          mediaLoader.cancelProgress(handleProgress);
+          if (getXydriveDownloadObserver(mediaHash) === observer) observer('canceled');
+        });
+      }
+
       mediaLoader.fetch(mediaHash, mediaFormat, handleProgress, generateUniqueId()).then(async (result) => {
-        if (observer && !isStillActive()) return;
+        if (observer && (!isStillActive() || getXydriveDownloadObserver(mediaHash) !== observer)) return;
         if (!result) {
-          observer?.('failed');
-          handleMediaDownloaded(mediaHash);
+          finish('failed');
           return;
         }
         if (mediaFormat === ApiMediaFormat.DownloadUrl) {
           const url = new URL(result, window.document.baseURI);
           url.searchParams.set('filename', encodeURIComponent(filename));
           const signedUrl = await mediaLoader.signDownloadUrl(url.toString());
-          if (observer && !isStillActive()) return;
+          if (observer && (!isStillActive() || getXydriveDownloadObserver(mediaHash) !== observer)) return;
           const downloadWindow = signedUrl ? window.open(signedUrl) : undefined;
-          observer?.(downloadWindow ? 'handedOff' : 'failed');
 
           downloadWindow?.addEventListener('beforeunload', () => {
             showNotification({
               message: { key: 'DownloadKeepAppOpen' },
             });
           }, { once: true });
-        } else if (result) {
+          finish(downloadWindow ? 'handedOff' : 'failed');
+        } else {
           download(result, filename);
-          observer?.('handedOff');
+          finish('handedOff');
         }
-
-        handleMediaDownloaded(mediaHash);
       }).catch(() => {
-        if (observer && !isStillActive()) return;
-        observer?.('failed');
-        handleMediaDownloaded(mediaHash);
+        finish('failed');
       });
     });
   }, [activeDownloads]);

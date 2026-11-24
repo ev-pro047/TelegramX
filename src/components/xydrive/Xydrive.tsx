@@ -161,7 +161,7 @@ const Xydrive = ({
             </Button>
           )}
         </div>
-        {isOpen && <XydriveTransfers key={sourceId || 'root'} ownerId={ownerId} files={files} />}
+        {isOpen && <XydriveTransfers key={`${ownerId}:${sourceId || 'root'}`} ownerId={ownerId} files={files} />}
         {isOpen && (
           <XydriveExplorer
             key={sourceId || 'root'}

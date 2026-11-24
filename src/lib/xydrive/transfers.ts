@@ -28,6 +28,7 @@ export type XydriveTransfer = {
   id: string;
   ownerId: string;
   sourceId: string;
+  destinationName?: string;
   tabId: number;
   name: string;
   size?: number;
@@ -45,6 +46,7 @@ type Job = {
   cancel?: () => void;
   startedAt?: number;
   retryAt?: number;
+  isCancelRequested?: boolean;
 };
 
 const jobs = new Map<string, Job>();
@@ -90,8 +92,9 @@ function getContext(job: Job) {
 }
 
 function progress(job: Job, value: number) {
-  if (job.row.status !== 'active' || !Number.isFinite(value)) return;
+  if (job.row.status !== 'active' || job.isCancelRequested || !Number.isFinite(value)) return;
   if (!getContext(job)) {
+    job.isCancelRequested = true;
     job.cancel?.();
     return;
   }
@@ -119,14 +122,21 @@ function getDestination() {
   const ownerId = global.currentUserId;
   const tabId = getCurrentTabId();
   const tab = selectTabState(global, tabId);
-  if (!ownerId || tab.xydriveOwnerId !== ownerId || global.passcode.isScreenLocked
+  if (!ownerId || tab?.xydriveOwnerId !== ownerId || global.passcode.isScreenLocked
     || !selectSharedSettings(global).isXydriveEnabled) return undefined;
-  return { ownerId, sourceId: tab.xydriveSourceId || ownerId, tabId };
+  const sourceId = tab.xydriveSourceId || ownerId;
+  const destinationName = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId)
+    .find(({ id }) => id === sourceId)?.title;
+  return { ownerId, sourceId, destinationName, tabId };
 }
 
 function enqueue(direction: 'upload' | 'download', name: string, size: number | undefined, file?: File, remote?: XydriveFile) {
   const destination = getDestination();
-  if (!destination || Array.from(jobs.values()).filter(({ row }) => isActiveTransfer(row.status)).length >= MAX_PENDING) return;
+  if (!destination) return;
+  if (Array.from(jobs.values()).filter(({ row }) => isActiveTransfer(row.status)).length >= MAX_PENDING) {
+    getActions().showNotification({ message: { key: 'XydriveTransferQueueFull' } });
+    return;
+  }
   if (remote && remote.chatId !== destination.sourceId) return;
   const id = generateUniqueId();
   const job: Job = { row: { ...destination, id, name, size, direction, status: 'queued', canRetry: false }, file, remote };
@@ -147,12 +157,30 @@ export function cancelXydriveTransfer(id: string) {
   const job = jobs.get(id);
   if (!job || !getContext(job)) return;
   if (job.row.status === 'queued') finish(job, 'canceled');
-  else if (job.row.status === 'active') job.cancel?.();
+  else if (job.row.status === 'active' && !job.isCancelRequested) {
+    job.isCancelRequested = true;
+    job.cancel?.();
+  }
+}
+
+export function cancelAllXydriveTransfers(ownerId?: string) {
+  jobs.forEach(({ row }) => {
+    if (row.ownerId === ownerId) cancelXydriveTransfer(row.id);
+  });
 }
 
 export function retryXydriveTransfer(id: string) {
   const job = jobs.get(id);
-  if (!job || !job.row.canRetry || !getContext(job) || (job.retryAt || 0) > Date.now()) return;
+  if (!job || !job.row.canRetry || !getContext(job)) return;
+  if ((job.retryAt || 0) > Date.now()) {
+    getActions().showNotification({ message: { key: 'XydriveTransferWait' } });
+    return;
+  }
+  if (Array.from(jobs.values()).filter(({ row }) => isActiveTransfer(row.status)).length >= MAX_PENDING) {
+    getActions().showNotification({ message: { key: 'XydriveTransferQueueFull' } });
+    return;
+  }
+  job.isCancelRequested = false;
   patch(job, { status: 'queued', canRetry: false, progress: undefined, speed: undefined });
   pump();
 }
@@ -263,17 +291,21 @@ async function download(job: Job) {
 
   await new Promise<void>((resolve) => {
     const actions = getActions();
+    let settled = false;
     const stop = observeXydriveDownload(hash, (event, value) => {
-      if (!isActiveTransfer(job.row.status)) return;
+      if (settled || !isActiveTransfer(job.row.status)) return;
       if (event === 'progress') {
         if (value !== undefined) progress(job, value);
         return;
       }
+      settled = true;
       stop();
       finish(job, event);
       resolve();
     });
     job.cancel = () => {
+      if (settled) return;
+      settled = true;
       stop();
       actions.cancelMediaHashDownloads({ mediaHashes: [hash], tabId: job.row.tabId });
       finish(job, 'canceled');
@@ -291,7 +323,13 @@ function pump() {
     job.startedAt = Date.now();
     patch(job, { status: 'active' });
     const run = job.row.direction === 'upload' ? upload : download;
+    const timer = window.setInterval(() => {
+      if (getContext(job) || job.row.status !== 'active' || job.isCancelRequested) return;
+      job.isCancelRequested = true;
+      job.cancel?.();
+    }, 500);
     void run(job).catch(() => finish(job, 'failed')).finally(() => {
+      window.clearInterval(timer);
       running -= 1;
       pump();
     });

@@ -13,3 +13,5 @@
 
 ## Validation
 Run npm run check:ts, npm run check:css, npm test, npm run build:production. Manually test free/premium file limits, root and mounted folder upload, multiple files, drop, original bytes, folder switch, cancellation during chunk upload, retry, flood wait, uncertain acknowledgement, account switch/lock, browser download handoff, protected content, deleted/changed files, duplicate warning, ordinary chat composer/upload/download, and mobile layout. This commit does not claim authenticated runtime testing.
+
+Cancel all stops queued and cancellable active jobs, not a server commit or browser-owned download. Destination names are captured at enqueue time. Native download observer removal is guarded by the active request identity, and the queue reports its capacity limit.

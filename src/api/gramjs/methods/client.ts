@@ -105,6 +105,7 @@ export function setLanguageCode({ langCode }: { langCode: string }) {
 }
 
 export async function init(initialArgs: ApiInitialArgs, onConnected?: NoneToVoidFunction) {
+  currentUserId = undefined;
   if (DEBUG) {
     // eslint-disable-next-line no-console
     console.log('>>> START INIT API');
@@ -210,6 +211,7 @@ export function setIsPremium({ isPremium }: { isPremium: boolean }) {
 
 const LOG_OUT_TIMEOUT = 2500;
 export async function destroy(noLogOut = false, noClearLocalDb = false) {
+  currentUserId = undefined;
   if (!noLogOut && client.isConnected()) {
     await Promise.race([
       invokeRequest(new GramJs.auth.LogOut()),
