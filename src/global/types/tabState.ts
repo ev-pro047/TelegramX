@@ -229,6 +229,7 @@ export type TabState = {
   xydriveOwnerId?: string;
   xydriveSourceId?: string;
   xydriveMountRequest?: { id: number; channelId: string };
+  xydriveCreateState?: { ownerId: string; requestId: number; status: 'creating' | 'created' | 'error' | 'limit' | 'unverified' };
   xydriveMountError?: 'wait' | 'generic' | 'unavailable';
   xydriveMediaRequest?: { id: number; fileId: string };
   xydriveMediaError?: 'wait' | 'unavailable';

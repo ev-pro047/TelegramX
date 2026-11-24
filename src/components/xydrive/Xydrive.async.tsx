@@ -29,6 +29,7 @@ type StateProps = {
   chats?: Record<string, ApiChat>;
   mountingId?: string;
   mountError?: 'wait' | 'generic' | 'unavailable';
+  createStatus?: 'creating' | 'created' | 'error' | 'limit' | 'unverified';
   drive?: XydriveState;
   previewingId?: string;
   mediaError?: 'wait' | 'unavailable';
@@ -38,11 +39,11 @@ type StateProps = {
 
 const XydriveAsync = ({
   isEnabled, currentUserId, xydriveOwnerId, isScreenLocked, sourceId, folders, chats, mountingId, mountError, drive,
-  previewingId, mediaError, isViewerOpen, isSynced,
+  previewingId, mediaError, isViewerOpen, isSynced, createStatus,
 }: StateProps) => {
   const {
     openXydrive, closeXydrive, openChat, focusMessage, loadXydrivePage, selectXydriveSource,
-    mountXydriveChannel, unmountXydriveChannel,
+    mountXydriveChannel, unmountXydriveChannel, createXydriveFolder,
     openXydriveMedia,
   } = getActions();
   const isOpen = Boolean(isEnabled && !isScreenLocked && currentUserId && xydriveOwnerId === currentUserId);
@@ -65,6 +66,14 @@ const XydriveAsync = ({
 
   const handleLoadMore = useLastCallback(() => {
     if (isOpen) loadXydrivePage();
+  });
+
+  const handleRefresh = useLastCallback(() => {
+    if (isOpen) loadXydrivePage({ shouldRefresh: true });
+  });
+
+  const handleCreate = useLastCallback((title: string) => {
+    if (isOpen) createXydriveFolder({ title });
   });
 
   const handleClose = useLastCallback(() => {
@@ -122,6 +131,9 @@ const XydriveAsync = ({
       onClose={handleClose}
       onOpenSaved={handleOpenSaved}
       onLoadMore={handleLoadMore}
+      onRefresh={handleRefresh}
+      onCreate={handleCreate}
+      createStatus={createStatus}
       onOpenMessage={handleOpenMessage}
       onPreview={handlePreview}
       previewingId={isOpen ? previewingId : undefined}
@@ -150,6 +162,8 @@ export default memo(withGlobal(
       chats: isOpen ? global.chats.byId : undefined,
       mountingId: isOpen ? tab.xydriveMountRequest?.channelId : undefined,
       mountError: isOpen ? tab.xydriveMountError : undefined,
+      createStatus: isOpen && tab.xydriveCreateState?.ownerId === global.currentUserId
+        ? tab.xydriveCreateState?.status : undefined,
       drive: isOpen ? tab.xydrive : undefined,
       previewingId: isOpen ? tab.xydriveMediaRequest?.fileId : undefined,
       mediaError: isOpen ? tab.xydriveMediaError : undefined,

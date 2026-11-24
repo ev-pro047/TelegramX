@@ -3609,6 +3609,16 @@ export interface LangPair {
   'XydriveTransferDuplicate': undefined;
   'XydriveTransferLimit': undefined;
   'XydriveBackToChats': undefined;
+  'XydriveNewFolder': undefined;
+  'XydriveCreateFolder': undefined;
+  'XydriveFolderName': undefined;
+  'XydriveCreateDesc': undefined;
+  'XydriveCreateError': undefined;
+  'XydriveCreateUnverified': undefined;
+  'XydriveCreateLimit': undefined;
+  'XydriveRefresh': undefined;
+  'XydriveTelegramBacked': undefined;
+  'XydriveLoadedFiles': undefined;
   'XydriveTitle': undefined;
   'XydriveBeta': undefined;
   'XydriveEnable': undefined;

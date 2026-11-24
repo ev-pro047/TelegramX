@@ -4848,3 +4848,14 @@
 "XydriveTransferCancelAll" = "Cancel all";
 
 "XydriveBackToChats" = "Back to chats";
+
+"XydriveNewFolder" = "New folder";
+"XydriveCreateFolder" = "Create folder";
+"XydriveFolderName" = "Folder name";
+"XydriveCreateDesc" = "This creates a new private Telegram channel in your account and mounts it as a top-level drive folder. No members are invited.";
+"XydriveCreateError" = "Creation could not be confirmed. Check your Telegram chat list before retrying; mount an existing channel if it was created.";
+"XydriveCreateUnverified" = "Channel created, but mounting could not be verified. Use Mount channel to finish.";
+"XydriveCreateLimit" = "Telegram channel limit reached.";
+"XydriveRefresh" = "Refresh";
+"XydriveTelegramBacked" = "Telegram-backed";
+"XydriveLoadedFiles" = "loaded files";

@@ -99,7 +99,7 @@ import {
   applyState, updateChannelState,
 } from '../updates/updateManager';
 import {
-  dispatchErrorUpdate, handleGramJsUpdate, invokeRequest, uploadAvatar,
+  dispatchErrorUpdate, handleGramJsUpdate, invokeRequest, isXydriveCurrentAccount, uploadAvatar,
 } from './client';
 import { getPassword } from './twoFaSettings';
 
@@ -962,6 +962,13 @@ export function updateTopicMutedState({
   });
 
   // TODO[forums] Request forum topic thread update
+}
+
+// A drive folder is an ordinary private broadcast channel, with no invited users.
+export async function createXydriveChannel({ ownerId, title }: { ownerId: string; title: string }) {
+  const name = title.trim();
+  if (!isXydriveCurrentAccount(ownerId) || !name || name.length > 128) return undefined;
+  return createChannel({ title: name, isBroadcast: true });
 }
 
 export async function createChannel({

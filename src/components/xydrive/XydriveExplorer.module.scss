@@ -343,3 +343,33 @@
   opacity: 0.5;
   cursor: default;
 }
+
+// Drive cards reserve a dedicated media region instead of a chat-style icon row.
+.grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
+}
+
+.grid .file {
+  border-color: var(--color-borders);
+  background-color: var(--color-background);
+}
+
+.grid .file.selected {
+  border-color: var(--color-primary);
+}
+
+.grid .thumbnail {
+  height: auto;
+  aspect-ratio: 4 / 3;
+  background-color: var(--color-background-secondary);
+}
+
+.grid .fileText {
+  width: 100%;
+}
+
+.list .file {
+  border-radius: 0.5rem;
+  background-color: var(--color-background);
+  border-bottom-color: var(--color-borders);
+}

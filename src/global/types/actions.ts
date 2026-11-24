@@ -414,7 +414,8 @@ export interface ActionPayloads {
   toggleChatInfo: ({ force?: boolean } & WithTabId) | undefined;
   openXydrive: WithTabId | undefined;
   closeXydrive: WithTabId | undefined;
-  loadXydrivePage: WithTabId | undefined;
+  loadXydrivePage: ({ shouldRefresh?: boolean } & WithTabId) | undefined;
+  createXydriveFolder: ({ title: string } & WithTabId);
   openXydriveMedia: ({ fileId: string } & WithTabId);
   selectXydriveSource: ({ channelId?: string } & WithTabId);
   mountXydriveChannel: ({ channelId: string } & WithTabId);

@@ -1,3 +1,4 @@
+import type { ElementRef } from '../../lib/teact/teact';
 import { memo, useEffect, useRef, useState } from '../../lib/teact/teact';
 
 import type { TransferStatus } from '../../lib/xydrive/transfers';
@@ -39,11 +40,12 @@ const FILTERS: { id: Filter; label: RegularLangKey }[] = [
   { id: 'history', label: 'XydriveTransferHistory' },
 ];
 
-type OwnProps = { ownerId?: string; files: readonly XydriveFile[] };
+type OwnProps = { ownerId?: string; files: readonly XydriveFile[]; pickerRef?: ElementRef<HTMLInputElement> };
 
-const XydriveTransfers = ({ ownerId, files }: OwnProps) => {
+const XydriveTransfers = ({ ownerId, files, pickerRef }: OwnProps) => {
   const lang = useLang();
-  const picker = useRef<HTMLInputElement>();
+  const localPicker = useRef<HTMLInputElement>();
+  const picker = pickerRef || localPicker;
   const [rows, setRows] = useState(() => getXydriveTransfers(ownerId));
   const [filter, setFilter] = useState<Filter>('all');
   const [expanded, setExpanded] = useState(false);

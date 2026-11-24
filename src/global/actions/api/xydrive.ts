@@ -18,6 +18,7 @@ import { selectChat } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
 
 let nextRequestId = 0;
+const creatingForAccounts = new Set<string>();
 
 function isXydriveOpen(global: GlobalState, tabId: number, ownerId: string) {
   return global.currentUserId === ownerId && !global.passcode.isScreenLocked
@@ -65,8 +66,64 @@ addActionHandler('mountXydriveChannel', async (global, actions, payload): Promis
   setGlobal(global);
 });
 
+addActionHandler('createXydriveFolder', async (global, actions, payload): Promise<void> => {
+  const { title, tabId = getCurrentTabId() } = payload;
+  const ownerId = global.currentUserId;
+  const name = title.trim();
+  if (!ownerId || !isXydriveOpen(global, tabId, ownerId) || !name || name.length > 128
+    || creatingForAccounts.has(ownerId)) return;
+
+  const requestId = ++nextRequestId;
+  const sourceAtStart = global.byTabId[tabId].xydriveSourceId;
+  creatingForAccounts.add(ownerId);
+  setGlobal(updateTabState(global, { xydriveCreateState: { ownerId, requestId, status: 'creating' } }, tabId));
+
+  let channel;
+  let verified;
+  let status: 'created' | 'error' | 'limit' | 'unverified' = 'error';
+  try {
+    const result = await callApi('createXydriveChannel', { ownerId, title: name });
+    channel = result?.channel;
+    if (channel) {
+      status = 'unverified';
+      const current = getGlobal();
+      if (current.currentUserId === ownerId && !current.passcode.isScreenLocked
+        && isXydriveChannelEligible(channel)) {
+        const result = await callApi('verifyXydriveChannel', { channel });
+        if (result?.type === 'channel' && result.folder.id === channel.id) {
+          verified = result.folder;
+          status = 'created';
+        }
+      }
+    }
+  } catch (error) {
+    if (!channel && (error as { message?: string }).message === 'CHANNELS_TOO_MUCH') status = 'limit';
+  } finally {
+    creatingForAccounts.delete(ownerId);
+  }
+
+  global = getGlobal();
+  const tab = global.byTabId[tabId];
+  if (global.currentUserId !== ownerId || !tab || tab.xydriveCreateState?.requestId !== requestId) return;
+  if (channel) global = updateChat(global, channel.id, channel);
+  if (verified) {
+    const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
+    global = replaceSettings(global, { xydriveMounts: { ownerId, folders: upsertXydriveMount(folders, verified) } });
+    if (isXydriveOpen(global, tabId, ownerId) && tab.xydriveSourceId === sourceAtStart) {
+      global = updateTabState(global, {
+        xydriveSourceId: verified.id, xydrive: undefined,
+        xydriveMediaRequest: undefined, xydriveMediaError: undefined,
+      }, tabId);
+    }
+  }
+  setGlobal(updateTabState(global, { xydriveCreateState: { ownerId, requestId, status } }, tabId));
+  if (status === 'limit' && isXydriveOpen(global, tabId, ownerId)) {
+    actions.openLimitReachedModal({ limit: 'channels', tabId });
+  }
+});
+
 addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload || {};
+  const { tabId = getCurrentTabId(), shouldRefresh } = payload || {};
   const ownerId = global.currentUserId;
   if (!ownerId || !isXydriveOpen(global, tabId, ownerId)) return;
 
@@ -75,8 +132,9 @@ addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<vo
   const folder = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId).find(({ id }) => id === sourceId);
   if (sourceId !== ownerId && !folder) return;
 
-  const previous = tab.xydrive;
-  if (previous?.status === 'loading' || (previous?.status === 'ready' && previous.nextOffsetId === undefined)) return;
+  if (tab.xydrive?.status === 'loading') return;
+  const previous = shouldRefresh ? undefined : tab.xydrive;
+  if (previous?.status === 'ready' && previous.nextOffsetId === undefined) return;
 
   const requestId = ++nextRequestId;
   const offsetId = previous?.nextOffsetId;
