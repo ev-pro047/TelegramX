@@ -13,12 +13,24 @@ export type XydriveFile = {
   mediaType: 'photo' | 'video' | 'audio' | 'voice' | 'document' | 'sticker';
 };
 
+export type XydriveMount = {
+  id: string;
+  title: string;
+  accessHash: string;
+};
+
+export type XydriveMountRegistry = {
+  ownerId: string;
+  folders: XydriveMount[];
+};
+
 export type XydriveState = {
+  sourceId: string;
   ownerId: string;
   files: XydriveFile[];
   scannedCount: number;
   nextOffsetId?: number;
   status: 'loading' | 'ready' | 'error';
   requestId?: number;
-  error?: 'wait' | 'generic';
+  error?: 'wait' | 'generic' | 'unavailable';
 };

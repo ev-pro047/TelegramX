@@ -227,6 +227,9 @@ export type TabState = {
   canInstall?: boolean;
   isStatisticsShown?: boolean;
   xydriveOwnerId?: string;
+  xydriveSourceId?: string;
+  xydriveMountRequest?: { id: number; channelId: string };
+  xydriveMountError?: 'wait' | 'generic' | 'unavailable';
   xydrive?: XydriveState;
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;

@@ -1,10 +1,12 @@
 import { memo, useEffect } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
-import type { XydriveState } from '../../lib/xydrive/types';
+import type { ApiChat } from '../../api/types';
+import type { XydriveMount, XydriveState } from '../../lib/xydrive/types';
 
 import { selectTabState } from '../../global/selectors';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
+import { getXydriveMounts } from '../../lib/xydrive/folders';
 import { Bundles } from '../../util/moduleLoader';
 
 import useLastCallback from '../../hooks/useLastCallback';
@@ -15,25 +17,30 @@ type StateProps = {
   currentUserId?: string;
   xydriveOwnerId?: string;
   isScreenLocked?: boolean;
+  sourceId?: string;
+  folders?: XydriveMount[];
+  chats?: Record<string, ApiChat>;
+  mountingId?: string;
+  mountError?: 'wait' | 'generic' | 'unavailable';
   drive?: XydriveState;
 };
 
 const XydriveAsync = ({
-  isEnabled, currentUserId, xydriveOwnerId, isScreenLocked, drive,
+  isEnabled, currentUserId, xydriveOwnerId, isScreenLocked, sourceId, folders, chats, mountingId, mountError, drive,
 }: StateProps) => {
-  const { closeXydrive, openChat, loadXydrivePage } = getActions();
+  const {
+    closeXydrive, openChat, loadXydrivePage, selectXydriveSource, mountXydriveChannel, unmountXydriveChannel,
+  } = getActions();
   const isOpen = Boolean(isEnabled && !isScreenLocked && currentUserId && xydriveOwnerId === currentUserId);
   const Xydrive = useModuleLoader(Bundles.Xydrive, 'Xydrive', !isOpen);
 
   useEffect(() => {
-    if (xydriveOwnerId && !isOpen) {
-      closeXydrive();
-    }
+    if (xydriveOwnerId && !isOpen) closeXydrive();
   }, [xydriveOwnerId, isOpen, closeXydrive]);
 
   useEffect(() => {
     if (isOpen) loadXydrivePage();
-  }, [isOpen, loadXydrivePage]);
+  }, [isOpen, sourceId, loadXydrivePage]);
 
   const handleLoadMore = useLastCallback(() => {
     if (isOpen) loadXydrivePage();
@@ -49,23 +56,54 @@ const XydriveAsync = ({
     openChat({ id: currentUserId, shouldReplaceHistory: true });
   });
 
+  const handleSelectSource = useLastCallback((channelId?: string) => {
+    if (isOpen) selectXydriveSource({ channelId });
+  });
+
+  const handleMount = useLastCallback((channelId: string) => {
+    if (isOpen) mountXydriveChannel({ channelId });
+  });
+
+  const handleUnmount = useLastCallback((channelId: string) => {
+    if (isOpen) unmountXydriveChannel({ channelId });
+  });
+
   return Xydrive ? (
     <Xydrive
       isOpen={isOpen}
       drive={isOpen ? drive : undefined}
+      sourceId={isOpen ? sourceId : undefined}
+      folders={isOpen ? folders : undefined}
+      chats={isOpen ? chats : undefined}
+      mountingId={isOpen ? mountingId : undefined}
+      mountError={isOpen ? mountError : undefined}
       onClose={handleClose}
       onOpenSaved={handleOpenSaved}
       onLoadMore={handleLoadMore}
+      onSelectSource={handleSelectSource}
+      onMount={handleMount}
+      onUnmount={handleUnmount}
     />
   ) : undefined;
 };
 
 export default memo(withGlobal(
-  (global): Complete<StateProps> => ({
-    isEnabled: selectSharedSettings(global).isXydriveEnabled,
-    currentUserId: global.currentUserId,
-    xydriveOwnerId: selectTabState(global).xydriveOwnerId,
-    isScreenLocked: global.passcode.isScreenLocked,
-    drive: selectTabState(global).xydrive,
-  }),
+  (global): Complete<StateProps> => {
+    const tab = selectTabState(global);
+    const isEnabled = selectSharedSettings(global).isXydriveEnabled;
+    const isOpen = Boolean(isEnabled && !global.passcode.isScreenLocked && global.currentUserId
+      && tab.xydriveOwnerId === global.currentUserId);
+    return {
+      isEnabled,
+      currentUserId: global.currentUserId,
+      xydriveOwnerId: tab.xydriveOwnerId,
+      isScreenLocked: global.passcode.isScreenLocked,
+      sourceId: isOpen ? tab.xydriveSourceId : undefined,
+      folders: isOpen ? getXydriveMounts(global.settings.byKey.xydriveMounts, global.currentUserId) : undefined,
+      chats: isOpen ? global.chats.byId : undefined,
+      mountingId: isOpen ? tab.xydriveMountRequest?.channelId : undefined,
+      mountError: isOpen ? tab.xydriveMountError : undefined,
+      drive: isOpen ? tab.xydrive : undefined,
+    };
+  },
 )(XydriveAsync));

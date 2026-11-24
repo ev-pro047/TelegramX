@@ -3601,6 +3601,25 @@ export interface LangPair {
   'XydriveEnd': undefined;
   'XydriveRetry': undefined;
   'XydriveLoadMore': undefined;
+  'XydriveMyDrive': undefined;
+  'XydriveDriveDesc': undefined;
+  'XydriveRoot': undefined;
+  'XydriveFolderPath': undefined;
+  'XydriveFolders': undefined;
+  'XydriveMountFolder': undefined;
+  'XydriveMountDesc': undefined;
+  'XydriveNoChannels': undefined;
+  'XydriveMount': undefined;
+  'XydriveMounting': undefined;
+  'XydriveMountError': undefined;
+  'XydriveUnavailable': undefined;
+  'XydrivePrivateChannel': undefined;
+  'XydriveNoFolders': undefined;
+  'XydriveRootFiles': undefined;
+  'XydriveFolderFiles': undefined;
+  'XydriveUnmount': undefined;
+  'XydriveEmptyFolder': undefined;
+  'XydriveFolderEnd': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {

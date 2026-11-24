@@ -415,6 +415,9 @@ export interface ActionPayloads {
   openXydrive: WithTabId | undefined;
   closeXydrive: WithTabId | undefined;
   loadXydrivePage: WithTabId | undefined;
+  selectXydriveSource: ({ channelId?: string } & WithTabId);
+  mountXydriveChannel: ({ channelId: string } & WithTabId);
+  unmountXydriveChannel: ({ channelId: string } & WithTabId);
   setIsUiReady: {
     uiReadyState: 0 | 1 | 2;
   } & WithTabId;
