@@ -1,14 +1,20 @@
 import type { GlobalState } from '../../types';
+import { MAIN_THREAD_ID } from '../../../api/types';
+import { MediaViewerOrigin } from '../../../types';
 
 import { callApi } from '../../../api/gramjs';
-import { getXydriveFile, mergeXydriveFiles } from '../../../lib/xydrive/fileMetadata';
+import { mergeXydriveFiles } from '../../../lib/xydrive/fileMetadata';
+import { getXydriveMediaFile, matchesXydriveMedia } from '../../../lib/xydrive/media';
 import {
   buildXydriveChannel, getXydriveMounts, isXydriveChannelEligible, upsertXydriveMount,
 } from '../../../lib/xydrive/folders';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
+import { updateChat } from '../../reducers/chats';
+import { replaceMessages } from '../../reducers/messages';
 import { replaceSettings } from '../../reducers/settings';
 import { updateTabState } from '../../reducers/tabs';
+import { selectChat } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
 
 let nextRequestId = 0;
@@ -125,7 +131,7 @@ addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<vo
       global = replaceSettings(global, { xydriveMounts: { ownerId, folders: updatedFolders } });
     }
   }
-  const files = result.messages.map((message) => getXydriveFile(message, sourceId)).filter(Boolean);
+  const files = result.messages.map((message) => getXydriveMediaFile(message, sourceId)).filter(Boolean);
   setGlobal(updateTabState(global, {
     xydrive: {
       ownerId,
@@ -136,4 +142,89 @@ addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<vo
       status: 'ready',
     },
   }, tabId));
+});
+
+addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<void> => {
+  const { fileId, tabId = getCurrentTabId() } = payload;
+  const ownerId = global.currentUserId;
+  if (!ownerId || !isXydriveOpen(global, tabId, ownerId)) return;
+  const tab = global.byTabId[tabId];
+  const sourceId = tab.xydriveSourceId || ownerId;
+  if (tab.xydrive?.ownerId !== ownerId || tab.xydrive.sourceId !== sourceId || tab.xydriveMediaRequest) return;
+  const file = tab.xydrive.files.find(({ id }) => id === fileId);
+  if (!file?.previewKind) return;
+
+  const folder = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId).find(({ id }) => id === sourceId);
+  if (sourceId !== ownerId && !folder) return;
+
+  const id = ++nextRequestId;
+  setGlobal(updateTabState(global, {
+    xydriveMediaRequest: { id, fileId },
+    xydriveMediaError: undefined,
+  }, tabId));
+
+  let result;
+  try {
+    result = await callApi('fetchXydriveMediaMessage', {
+      messageId: file.messageId,
+      channel: folder && buildXydriveChannel(folder),
+    });
+  } catch {
+    result = undefined;
+  }
+
+  global = getGlobal();
+  if (!isXydriveOpen(global, tabId, ownerId)) return;
+  const currentTab = global.byTabId[tabId];
+  if (currentTab.xydriveMediaRequest?.id !== id || (currentTab.xydriveSourceId || ownerId) !== sourceId) return;
+  const currentFile = currentTab.xydrive?.files.find((item) => item.id === fileId);
+  const isMounted = sourceId === ownerId || getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId)
+    .some((item) => item.id === sourceId);
+  const refreshedFile = result?.type === 'message' ? getXydriveMediaFile(result.message, sourceId) : undefined;
+  const isValid = currentFile && isMounted && refreshedFile && matchesXydriveMedia(file, refreshedFile)
+    && matchesXydriveMedia(currentFile, refreshedFile);
+
+  global = updateTabState(global, {
+    xydriveMediaRequest: undefined,
+    xydriveMediaError: isValid ? undefined : result?.type === 'wait' ? 'wait' : 'unavailable',
+  }, tabId);
+
+  if (!isValid || result?.type !== 'message') {
+    // The original file may have been removed or changed since this page loaded.
+    // Drop stale metadata/thumbnail for a definite mismatch, not a transient network error.
+    if (currentTab.xydrive && result?.type === 'channelUnavailable') {
+      global = updateTabState(global, {
+        xydrive: {
+          ...currentTab.xydrive, files: [], scannedCount: 0, nextOffsetId: undefined,
+          requestId: undefined, status: 'error', error: 'unavailable',
+        },
+      }, tabId);
+    } else if (currentTab.xydrive && (result?.type === 'unavailable' || result?.type === 'message')) {
+      global = updateTabState(global, {
+        xydrive: { ...currentTab.xydrive, files: currentTab.xydrive.files.filter((item) => item.id !== fileId) },
+      }, tabId);
+    }
+    setGlobal(global);
+    return;
+  }
+
+  if (result.chat) global = updateChat(global, result.chat.id, result.chat);
+  if (!selectChat(global, sourceId)) {
+    setGlobal(updateTabState(global, { xydriveMediaError: 'unavailable' }, tabId));
+    return;
+  }
+  // Insert only the explicitly opened message into the native message store, not the entire drive history.
+  global = replaceMessages(global, [result.message]);
+  setGlobal(global);
+  if (refreshedFile?.previewKind === 'viewer') {
+    actions.openMediaViewer({
+      chatId: sourceId, messageId: file.messageId, origin: MediaViewerOrigin.Xydrive, tabId,
+    });
+  } else if (refreshedFile?.previewKind === 'audio') {
+    actions.openAudioPlayer({
+      item: { type: 'message', chatId: sourceId, threadId: MAIN_THREAD_ID, messageId: file.messageId },
+      source: { type: 'single' },
+      tabId,
+    });
+  }
 });

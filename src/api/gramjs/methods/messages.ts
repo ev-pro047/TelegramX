@@ -264,7 +264,7 @@ async function fetchVerifiedXydriveChannel(channel: ApiChat) {
   const verified = buildApiChatFromPreview(raw);
   if (!verified || verified.id !== channel.id || !isXydriveChannelEligible(verified)) return undefined;
 
-  return { id: verified.id, title: verified.title, accessHash: verified.accessHash! };
+  return { id: verified.id, title: verified.title, accessHash: verified.accessHash!, chat: verified };
 }
 
 function isXydriveChannelUnavailable(err: unknown) {
@@ -279,7 +279,9 @@ export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
 
   try {
     const folder = await fetchVerifiedXydriveChannel(channel);
-    return folder ? { type: 'channel' as const, folder } : { type: 'unavailable' as const };
+    return folder ? {
+      type: 'channel' as const, folder: { id: folder.id, title: folder.title, accessHash: folder.accessHash },
+    } : { type: 'unavailable' as const };
   } catch (err) {
     if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
       xydriveRetryAt = getServerTime() + err.seconds;
@@ -321,13 +323,42 @@ export async function fetchXydriveHistory({ offsetId, channel }: { offsetId?: nu
     if (rawIds.length && nextOffsetId === undefined) return undefined;
 
     const messages = result.messages.map(buildApiMessage).filter(Boolean);
-    return { type: 'page' as const, messages, nextOffsetId, scannedCount: rawIds.length, folder: verified };
+    const folder = verified && { id: verified.id, title: verified.title, accessHash: verified.accessHash };
+    return { type: 'page' as const, messages, nextOffsetId, scannedCount: rawIds.length, folder };
   } catch (err) {
     if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
       xydriveRetryAt = getServerTime() + err.seconds;
       return { type: 'wait' as const, retryAfter: err.seconds };
     }
     if (channel && isXydriveChannelUnavailable(err)) return { type: 'unavailable' as const };
+    return undefined;
+  }
+}
+
+export async function fetchXydriveMediaMessage({ channel, messageId }: { channel?: ApiChat; messageId: number }) {
+  if (!Number.isSafeInteger(messageId) || messageId <= 0) return undefined;
+  if (xydriveRetryAt > getServerTime()) return { type: 'wait' as const };
+
+  try {
+    const verified = channel ? await fetchVerifiedXydriveChannel(channel) : undefined;
+    if (channel && !verified) return { type: 'channelUnavailable' as const };
+
+    const ids = [new GramJs.InputMessageID({ id: messageId })];
+    const result = await invokeRequest(verified
+      ? new GramJs.channels.GetMessages({ channel: buildInputChannel(verified.id, verified.accessHash), id: ids })
+      : new GramJs.messages.GetMessages({ id: ids }), { shouldThrow: true });
+
+    if (!result || result instanceof GramJs.messages.MessagesNotModified) return undefined;
+    const raw = result.messages.find(({ id }) => id === messageId);
+    const message = raw && buildApiMessage(raw);
+    if (!message) return { type: 'unavailable' as const };
+    return { type: 'message' as const, message, chat: verified?.chat };
+  } catch (err) {
+    if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + err.seconds;
+      return { type: 'wait' as const };
+    }
+    if (channel && isXydriveChannelUnavailable(err)) return { type: 'channelUnavailable' as const };
     return undefined;
   }
 }

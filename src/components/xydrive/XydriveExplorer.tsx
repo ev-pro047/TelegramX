@@ -13,6 +13,7 @@ import {
 import buildClassName from '../../util/buildClassName';
 import { formatFileSize } from '../../util/text/textFormat';
 
+import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import useKeyboardListNavigation from '../../hooks/useKeyboardListNavigation';
 import useLang from '../../hooks/useLang';
 
@@ -20,6 +21,7 @@ import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
 import Menu from '../ui/Menu';
 import MenuItem from '../ui/MenuItem';
+import XydriveThumbnail from './XydriveThumbnail';
 
 import styles from './XydriveExplorer.module.scss';
 
@@ -28,6 +30,8 @@ type OwnProps = {
   isComplete: boolean;
   isLoading: boolean;
   onOpenMessage: (file: XydriveFile) => void;
+  onPreview: (file: XydriveFile) => void;
+  previewingId?: string;
 };
 
 const CATEGORY_LABELS: Record<XydriveCategory, RegularLangKey> = {
@@ -57,7 +61,7 @@ const SORT_OPTIONS: { key: XydriveSort; label: RegularLangKey }[] = [
 ];
 
 const XydriveExplorer = ({
-  files, isComplete, isLoading, onOpenMessage,
+  files, isComplete, isLoading, onOpenMessage, onPreview, previewingId,
 }: OwnProps) => {
   const lang = useLang();
   const [query, setQuery] = useState('');
@@ -69,6 +73,9 @@ const XydriveExplorer = ({
   const [detailsId, setDetailsId] = useState<string | undefined>(undefined);
   const [menuId, setMenuId] = useState<string | undefined>(undefined);
   const listRef = useRef<HTMLUListElement>();
+  // Undefined observer root uses the viewport; ancestor scroll clipping is respected.
+  const viewportRef = useRef<HTMLDivElement>();
+  const { observe } = useIntersectionObserver({ rootRef: viewportRef });
 
   const visibleFiles = useMemo(
     () => queryXydriveFiles(files, query, category, sort, direction),
@@ -227,12 +234,15 @@ const XydriveExplorer = ({
                       aria-pressed={isSelected}
                       title={file.name}
                       onClick={(event) => handleFileClick(event, file)}
+                      onDoubleClick={() => {
+                        if (file.previewKind && !previewingId) onPreview(file);
+                      }}
                       onContextMenu={(event) => {
                         event.preventDefault();
                         setMenuId(file.id);
                       }}
                     >
-                      <Icon name={CATEGORY_ICONS[file.category]} className={styles.fileIcon} />
+                      <XydriveThumbnail file={file} icon={CATEGORY_ICONS[file.category]} observe={observe} />
                       <span className={styles.fileText}>
                         <span className={styles.name} dir="auto">{file.name}</span>
                         <span className={styles.meta}>
@@ -242,6 +252,19 @@ const XydriveExplorer = ({
                       </span>
                     </button>
                     <div className={styles.fileActions}>
+                      {file.previewKind && (
+                        <button
+                          type="button"
+                          className={styles.controlButton}
+                          aria-label={lang('XydrivePreview')}
+                          title={lang('XydrivePreview')}
+                          disabled={Boolean(previewingId)}
+                          onClick={() => onPreview(file)}
+                        >
+                          <Icon name={previewingId === file.id ? 'reload-arrows'
+                            : file.previewKind === 'audio' ? 'play' : 'eye'} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={styles.controlButton}
@@ -273,6 +296,11 @@ const XydriveExplorer = ({
                             positionY="bottom"
                             onClose={() => setMenuId(undefined)}
                           >
+                            {file.previewKind && (
+                              <MenuItem icon="eye" disabled={Boolean(previewingId)} onClick={() => onPreview(file)}>
+                                {lang('XydrivePreview')}
+                              </MenuItem>
+                            )}
                             <MenuItem icon="info" onClick={() => setDetailsId(file.id)}>{lang('XydriveDetails')}</MenuItem>
                             <MenuItem icon="check" onClick={() => toggleFile(file.id)}>
                               {lang(isSelected ? 'XydriveDeselectFile' : 'XydriveSelectFile')}
@@ -315,6 +343,16 @@ const XydriveExplorer = ({
               <dt>{lang('XydriveMimeType')}</dt>
               <dd>{details.mimeType || lang('XydriveUnknownValue')}</dd>
             </dl>
+            {details.previewKind && (
+              <Button
+                size="smaller"
+                isLoading={previewingId === details.id}
+                disabled={Boolean(previewingId)}
+                onClick={() => onPreview(details)}
+              >
+                {lang('XydrivePreview')}
+              </Button>
+            )}
             <Button size="smaller" color="translucent" onClick={() => onOpenMessage(details)}>
               {lang('XydriveOpenMessage')}
             </Button>

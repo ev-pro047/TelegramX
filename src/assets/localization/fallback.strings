@@ -4812,3 +4812,5 @@
 "XydriveMimeType" = "MIME type";
 "XydriveUnknownValue" = "Unavailable";
 "XydriveLoadingOlder" = "Loading older messages…";
+"XydrivePreview" = "Open media";
+"XydriveMediaUnavailable" = "This media is unavailable or has changed. Return to its Telegram message or reload the folder.";

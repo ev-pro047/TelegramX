@@ -57,6 +57,7 @@ export type OwnProps = {
   currencyInBalanceBar?: 'TON' | 'XTR';
   isCondensedHeader?: boolean;
   noFreezeOnClose?: boolean;
+  isKeyboardSuspended?: boolean;
   onClose: NoneToVoidFunction;
   onCloseAnimationEnd?: NoneToVoidFunction;
   onEnter?: NoneToVoidFunction;
@@ -68,6 +69,7 @@ const Modal = (props: OwnProps) => {
     isOpen,
     noBackdropClose,
     noFreezeOnClose,
+    isKeyboardSuspended,
     isNativeDialog,
     noTitleAutoFocus,
     onClose,
@@ -154,9 +156,10 @@ const Modal = (props: OwnProps) => {
   });
 
   useEffect(() => (
-    isOpen ? captureKeyboardListeners({ onEsc: onClose, onEnter: handleEnter }) : undefined
-  ), [isOpen, onClose, handleEnter]);
-  useEffect(() => (isOpen && modalRef.current ? trapFocus(modalRef.current) : undefined), [isOpen, modalRef]);
+    isOpen && !isKeyboardSuspended ? captureKeyboardListeners({ onEsc: onClose, onEnter: handleEnter }) : undefined
+  ), [isOpen, isKeyboardSuspended, onClose, handleEnter]);
+  useEffect(() => (isOpen && !isKeyboardSuspended && modalRef.current ? trapFocus(modalRef.current) : undefined),
+    [isOpen, isKeyboardSuspended, modalRef]);
 
   useLayoutEffect(() => {
     if (!isNativeDialog || !shouldRender) {

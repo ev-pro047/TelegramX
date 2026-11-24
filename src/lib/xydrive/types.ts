@@ -5,6 +5,8 @@ export type XydriveFile = {
   chatId: string;
   messageId: number;
   mediaId?: string;
+  thumbnailHash?: string;
+  previewKind?: 'viewer' | 'audio';
   name: string;
   mimeType?: string;
   size?: number;

@@ -403,6 +403,7 @@ export enum MediaViewerOrigin {
   PollPreview,
   RichPageBlock,
   IVPageBlock,
+  Xydrive,
 }
 
 export enum StoryViewerOrigin {
