@@ -322,7 +322,6 @@ export async function uploadXydriveDocument({
       media,
       message: '',
       randomId: generateRandomBigInt(),
-      clearDraft: false,
     }), { shouldThrow: true });
     return result ? 'complete' as const : 'unknown' as const;
   } catch (err) {

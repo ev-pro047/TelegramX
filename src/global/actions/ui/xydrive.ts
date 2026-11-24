@@ -68,10 +68,12 @@ addActionHandler('unmountXydriveChannel', (global, actions, payload): ActionRetu
   if (!folders.some(({ id }) => id === channelId)) return undefined;
   const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
   const parents = { ...org.parents };
+  const folderLabels = { ...org.folderLabels };
+  delete folderLabels[channelId];
   delete parents[channelId];
   for (const id of Object.keys(parents)) if (parents[id] === channelId) delete parents[id];
   global = replaceSettings(global, { xydriveMounts: { ownerId, folders: folders.filter(({ id }) => id !== channelId) },
-    xydriveOrganization: { ...org, parents } });
+    xydriveOrganization: { ...org, parents, folderLabels } });
   for (const tab of Object.values(global.byTabId)) {
     if (tab.xydriveIndex?.ownerId === ownerId) global = updateTabState(global, { xydriveIndex: undefined }, tab.id);
     if (tab.xydriveSourceId === channelId && tab.xydriveOwnerId === ownerId) {
@@ -92,6 +94,23 @@ addActionHandler('setXydriveFolderParent', (global, actions, payload): ActionRet
   const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
   const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
   return replaceSettings(global, { xydriveOrganization: setFolderParent(org, folders, channelId, parentId) });
+});
+
+addActionHandler('labelXydriveFolder', (global, actions, payload): ActionReturnType => {
+  const { channelId, favorite, pinned, tabId = getCurrentTabId() } = payload;
+  const ownerId = global.currentUserId;
+  if (!ownerId || global.byTabId[tabId]?.xydriveOwnerId !== ownerId || global.passcode.isScreenLocked
+    || !selectSharedSettings(global).isXydriveEnabled) return undefined;
+  const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
+  if (!folders.some(({ id }) => id === channelId)) return undefined;
+
+  const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
+  const previous = org.folderLabels?.[channelId];
+  const label = { favorite: favorite ?? previous?.favorite, pinned: pinned ?? previous?.pinned };
+  const folderLabels = { ...org.folderLabels };
+  if (label.favorite || label.pinned) folderLabels[channelId] = label;
+  else delete folderLabels[channelId];
+  return replaceSettings(global, { xydriveOrganization: { ...org, folderLabels } });
 });
 
 addActionHandler('labelXydriveFile', (global, actions, payload): ActionReturnType => {

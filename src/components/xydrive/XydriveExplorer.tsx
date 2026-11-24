@@ -1,9 +1,12 @@
 import {
   memo, useEffect, useMemo, useRef, useState,
 } from '../../lib/teact/teact';
+import { getActions } from '../../global';
 
 import type { XydriveDirection, XydriveFilter, XydriveSort } from '../../lib/xydrive/explorer';
-import type { XydriveCategory, XydriveFile, XydriveMount, XydriveMutationStatus, XydriveOrganization } from '../../lib/xydrive/types';
+import type {
+  XydriveCategory, XydriveFile, XydriveMount, XydriveMutationStatus, XydriveOrganization,
+} from '../../lib/xydrive/types';
 import type { IconName } from '../../types/icons';
 import type { RegularLangKey } from '../../types/language';
 
@@ -13,22 +16,39 @@ import {
 import { getFileLabel, getFolderChain } from '../../lib/xydrive/organization';
 import { enqueueXydriveDownload } from '../../lib/xydrive/transfers';
 import buildClassName from '../../util/buildClassName';
+import { copyTextToClipboard } from '../../util/clipboard';
 import { formatFileSize } from '../../util/text/textFormat';
 
+import useAppLayout from '../../hooks/useAppLayout';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import useKeyboardListNavigation from '../../hooks/useKeyboardListNavigation';
 import useLang from '../../hooks/useLang';
 
 import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
+import Loading from '../ui/Loading';
 import Menu from '../ui/Menu';
 import MenuItem from '../ui/MenuItem';
+import Modal from '../ui/Modal';
 import XydriveThumbnail from './XydriveThumbnail';
 
 import styles from './XydriveExplorer.module.scss';
 
 type OwnProps = {
   files: readonly XydriveFile[];
+  indexedFiles?: readonly XydriveFile[];
+  childrenFolders: XydriveMount[];
+  sourceId?: string;
+  view: 'grid' | 'list';
+  isIndexComplete?: boolean;
+  hasMore: boolean;
+  isRecent?: boolean;
+  loadError?: RegularLangKey;
+  emptyLabel: RegularLangKey;
+  onChangeView: (view: 'grid' | 'list') => void;
+  onLoadMore: NoneToVoidFunction;
+  onUpload?: NoneToVoidFunction;
+  onOpenFolder: (id: string) => void;
   isComplete: boolean;
   isLoading: boolean;
   onOpenMessage: (file: XydriveFile) => void;
@@ -41,6 +61,8 @@ type OwnProps = {
   onMutate: (fileId: string, operation: 'delete' | 'move', destinationId?: string) => void;
   mutationStatus?: XydriveMutationStatus;
 };
+
+const RESULT_BATCH_SIZE = 120;
 
 const CATEGORY_LABELS: Record<XydriveCategory, RegularLangKey> = {
   images: 'XydriveImages',
@@ -70,14 +92,18 @@ const SORT_OPTIONS: { key: XydriveSort; label: RegularLangKey }[] = [
 
 const XydriveExplorer = ({
   files, isComplete, isLoading, onOpenMessage, onPreview, previewingId,
-  organization, folders, ownerId, onLabel, onMutate, mutationStatus,
+  organization, folders, ownerId, onLabel, onMutate, mutationStatus, indexedFiles,
+  childrenFolders, sourceId, view, isIndexComplete, hasMore, loadError, emptyLabel,
+  onChangeView, onLoadMore, onUpload, onOpenFolder, isRecent,
 }: OwnProps) => {
+  const { showNotification } = getActions();
   const lang = useLang();
+  const { isMobile, isTouchScreen } = useAppLayout();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<XydriveFilter>('all');
-  const [sort, setSort] = useState<XydriveSort>('date');
+  const [sort, setSort] = useState<XydriveSort | 'opened'>(isRecent ? 'opened' : 'date');
   const [direction, setDirection] = useState<XydriveDirection>('desc');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [resultLimit, setResultLimit] = useState(RESULT_BATCH_SIZE);
   const [selection, setSelection] = useState(EMPTY_XYDRIVE_SELECTION);
   const [detailsId, setDetailsId] = useState<string | undefined>(undefined);
   const [menuId, setMenuId] = useState<string | undefined>(undefined);
@@ -91,20 +117,62 @@ const XydriveExplorer = ({
   }
   const listRef = useRef<HTMLUListElement>();
   // Undefined observer root uses the viewport; ancestor scroll clipping is respected.
-  const viewportRef = useRef<HTMLDivElement>();
-  const { observe } = useIntersectionObserver({ rootRef: viewportRef });
+  const scrollRef = useRef<HTMLDivElement>();
+  const menuRef = useRef<HTMLDivElement>();
+  const menuTriggerRef = useRef<HTMLElement>();
+  const { observe } = useIntersectionObserver({ rootRef: scrollRef });
 
-  const visibleFiles = useMemo(
-    () => queryXydriveFiles(files.map((file) => ({ ...file, name: getFileLabel(organization, file)?.alias || file.name })),
-      query, category, sort, direction).sort((a, b) => Number(Boolean(getFileLabel(organization, b)?.pinned)) - Number(Boolean(getFileLabel(organization, a)?.pinned))),
-    [files, query, category, sort, direction, organization],
-  );
+  const folderPaths = useMemo(() => new Map(folders.map(({ id }) => {
+    const chain = getFolderChain(organization, folders, id);
+    return [id, { chain, title: chain.map(({ title }) => title).join(' / ') }];
+  })), [folders, organization]);
+  const term = query.trim().normalize('NFC').toLowerCase();
+  const isRecursiveSearch = Boolean(term && indexedFiles);
+  const hasFilter = Boolean(term) || category !== 'all';
+  const resultsAreComplete = isRecursiveSearch ? isIndexComplete : isComplete;
+  const folderLabels = organization.folderLabels;
+  const visibleFolders = useMemo(() => {
+    if (category !== 'all') return [];
+    const candidates = isRecursiveSearch ? folders.filter(({ id }) => id !== sourceId
+      && (!sourceId || folderPaths.get(id)?.chain.some((folder) => folder.id === sourceId))) : childrenFolders;
+    return candidates.filter(({ title }) => title.normalize('NFC').toLowerCase().includes(term))
+      .sort((left, right) => Number(Boolean(folderLabels?.[right.id]?.pinned))
+        - Number(Boolean(folderLabels?.[left.id]?.pinned))
+        || left.title.localeCompare(right.title, undefined, { numeric: true })
+        * (sort === 'name' && direction === 'desc' ? -1 : 1));
+  }, [
+    category, childrenFolders, direction, folderLabels, folderPaths, folders, isRecursiveSearch, sort, sourceId, term,
+  ]);
+
+  const matchingFiles = useMemo(() => {
+    const candidates = term && indexedFiles ? indexedFiles.filter(({ chatId }) => !sourceId
+      || chatId === sourceId || folderPaths.get(chatId)?.chain.some(({ id }) => id === sourceId)) : files;
+    const originals = new Map(candidates.map((file) => [file.id, file]));
+    return queryXydriveFiles(candidates.map((file) => {
+      const alias = getFileLabel(organization, file)?.alias;
+      return alias ? { ...file, name: alias } : file;
+    }), query, category, sort === 'opened' ? 'date' : sort, direction)
+      .sort((a, b) => {
+        if (sort === 'opened') {
+          return ((getFileLabel(organization, b)?.lastOpened || 0) - (getFileLabel(organization, a)?.lastOpened || 0))
+            * (direction === 'desc' ? 1 : -1);
+        }
+        return Number(Boolean(getFileLabel(organization, b)?.pinned))
+          - Number(Boolean(getFileLabel(organization, a)?.pinned));
+      })
+      .map(({ id }) => originals.get(id)!);
+  }, [files, indexedFiles, query, term, category, sort, direction, organization, sourceId, folderPaths]);
+  const visibleFiles = useMemo(() => matchingFiles.slice(0, resultLimit), [matchingFiles, resultLimit]);
   const visibleIds = useMemo(() => visibleFiles.map(({ id }) => id), [visibleFiles]);
   const visibleSelection = useMemo(
     () => restrictXydriveSelection(selection, visibleIds), [selection, visibleIds],
   );
   const details = visibleFiles.find(({ id }) => id === detailsId);
-  const hasFilter = Boolean(query.trim()) || category !== 'all';
+  const detailLabel = details && getFileLabel(organization, details);
+  const editTitle = edit?.mode === 'rename' ? 'XydriveRename' : edit?.mode === 'move' ? 'XydriveMove' : 'XydriveDelete';
+  const editDescription = edit?.mode === 'rename' ? 'XydriveAliasDesc'
+    : edit?.mode === 'move' ? 'XydriveMoveDesc' : 'XydriveDeleteDesc';
+  const managedFolders = useMemo(() => folders.filter(({ isManaged }) => isManaged), [folders]);
   const navigateWithKeyboard = useKeyboardListNavigation(listRef, true, undefined, '[data-xydrive-file]', true);
 
   useEffect(() => {
@@ -130,7 +198,7 @@ const XydriveExplorer = ({
   function handleFileClick(event: React.MouseEvent<HTMLButtonElement>, file: XydriveFile) {
     const mode = event.shiftKey ? 'range' : event.ctrlKey || event.metaKey ? 'toggle' : 'replace';
     setSelection((current) => selectXydriveFile(current, visibleIds, file.id, mode));
-    if (mode === 'replace') setDetailsId(file.id);
+    if (mode === 'replace' && detailsId) setDetailsId(file.id);
   }
 
   function toggleFile(id: string) {
@@ -140,6 +208,76 @@ const XydriveExplorer = ({
   function clearFilters() {
     setQuery('');
     setCategory('all');
+    setResultLimit(RESULT_BATCH_SIZE);
+  }
+
+  function copyNames(filesToCopy: XydriveFile[]) {
+    const names = filesToCopy.map((file) => getFileLabel(organization, file)?.alias || file.name);
+    const isCopied = copyTextToClipboard(names.join('\n'));
+    showNotification({ message: { key: isCopied ? 'XydriveNamesCopied' : 'XydriveClipboardError' } });
+  }
+
+  function openFile(file: XydriveFile) {
+    if (file.previewKind) {
+      if (!previewingId) onPreview(file);
+    } else {
+      onOpenMessage(file);
+    }
+  }
+
+  function getMenuAnchor() {
+    const rect = menuTriggerRef.current!.getBoundingClientRect();
+    return { x: rect.left, y: rect.bottom, width: rect.width };
+  }
+
+  function renderDetails(file: XydriveFile) {
+    return (
+      <div className={styles.detailContent}>
+        <Icon name={CATEGORY_ICONS[file.category]} className={styles.detailIcon} />
+        <strong className={styles.detailName} dir="auto">{detailLabel?.alias || file.name}</strong>
+        <dl className={styles.metadata}>
+          {detailLabel?.alias && (
+            <>
+              <dt>{lang('XydriveOriginalName')}</dt>
+              <dd dir="auto">{file.name}</dd>
+            </>
+          )}
+          <dt>{lang('XydriveLocation')}</dt>
+          <dd dir="auto">{folderPaths.get(file.chatId)?.title || lang('XydriveRoot')}</dd>
+          <dt>{lang('XydriveSortType')}</dt>
+          <dd>{lang(CATEGORY_LABELS[file.category])}</dd>
+          <dt>{lang('XydriveSortSize')}</dt>
+          <dd>{file.size === undefined ? lang('XydriveUnknownSize') : formatFileSize(lang, file.size)}</dd>
+          <dt>{lang('XydriveSortDate')}</dt>
+          <dd>{new Date(file.date * 1000).toLocaleDateString()}</dd>
+          <dt>{lang('XydriveMimeType')}</dt>
+          <dd>{file.mimeType || lang('XydriveUnknownValue')}</dd>
+        </dl>
+        <div className={styles.detailActions}>
+          {file.previewKind && (
+            <Button
+              size="smaller"
+              isLoading={previewingId === file.id}
+              disabled={Boolean(previewingId)}
+              onClick={() => onPreview(file)}
+            >
+              {lang('XydrivePreview')}
+            </Button>
+          )}
+          <Button
+            size="smaller"
+            color="translucent-bordered"
+            iconName="download"
+            onClick={() => enqueueXydriveDownload(file)}
+          >
+            {lang('XydriveTransferDownload')}
+          </Button>
+          <Button size="smaller" color="translucent" onClick={() => onOpenMessage(file)}>
+            {lang('XydriveOpenMessage')}
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -152,14 +290,20 @@ const XydriveExplorer = ({
             aria-label={lang('XydriveSearch')}
             placeholder={lang('XydriveSearch')}
             value={query}
-            onInput={(event) => setQuery(event.currentTarget.value)}
+            onInput={(event) => {
+              setQuery(event.currentTarget.value);
+              setResultLimit(RESULT_BATCH_SIZE);
+            }}
           />
         </div>
         <div className={styles.controls}>
           <select
             aria-label={lang('XydriveFilter')}
             value={category}
-            onChange={(event) => setCategory(event.currentTarget.value as XydriveFilter)}
+            onChange={(event) => {
+              setCategory(event.currentTarget.value as XydriveFilter);
+              setResultLimit(RESULT_BATCH_SIZE);
+            }}
           >
             <option value="all">{lang('XydriveAllTypes')}</option>
             {CATEGORIES.map((item) => <option key={item} value={item}>{lang(CATEGORY_LABELS[item])}</option>)}
@@ -167,8 +311,9 @@ const XydriveExplorer = ({
           <select
             aria-label={lang('XydriveSort')}
             value={sort}
-            onChange={(event) => setSort(event.currentTarget.value as XydriveSort)}
+            onChange={(event) => setSort(event.currentTarget.value as typeof sort)}
           >
+            {isRecent && <option value="opened">{lang('XydriveLastOpened')}</option>}
             {SORT_OPTIONS.map(({ key, label }) => <option key={key} value={key}>{lang(label)}</option>)}
           </select>
           <button
@@ -187,9 +332,14 @@ const XydriveExplorer = ({
               aria-pressed={view === 'grid'}
               aria-label={lang('XydriveGrid')}
               title={lang('XydriveGrid')}
-              onClick={() => setView('grid')}
+              onClick={() => onChangeView('grid')}
             >
-              <span className={styles.gridIcon} aria-hidden="true"><i /><i /><i /><i /></span>
+              <span className={styles.gridIcon} aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
             </button>
             <button
               type="button"
@@ -197,7 +347,7 @@ const XydriveExplorer = ({
               aria-pressed={view === 'list'}
               aria-label={lang('XydriveList')}
               title={lang('XydriveList')}
-              onClick={() => setView('list')}
+              onClick={() => onChangeView('list')}
             >
               <Icon name="list" />
             </button>
@@ -205,73 +355,162 @@ const XydriveExplorer = ({
         </div>
       </div>
       {edit && (
-        <section className={styles.editPanel} aria-label={lang(edit.mode === 'rename' ? 'XydriveRename' : edit.mode === 'move' ? 'XydriveMove' : 'XydriveDelete')}>
-          <strong>{lang(edit.mode === 'rename' ? 'XydriveRename' : edit.mode === 'move' ? 'XydriveMove' : 'XydriveDelete')}: {edit.file.name}</strong>
-          <p className={styles.scope}>{lang(edit.mode === 'rename' ? 'XydriveAliasDesc' : edit.mode === 'move' ? 'XydriveMoveDesc' : 'XydriveDeleteDesc')}</p>
-          {edit.mode === 'rename' && <input className={styles.editInput} aria-label={lang('XydriveRename')} value={value}
-            maxLength={255} onInput={(event) => setValue(event.currentTarget.value)} />}
-          {edit.mode === 'move' && <select className={styles.editInput} aria-label={lang('XydriveDestination')} value={value}
-            onChange={(event) => setValue(event.currentTarget.value)}>
-            <option value="">{lang(edit.file.chatId === ownerId ? 'XydriveChooseFolder' : 'XydriveRoot')}</option>
-            {folders.filter(({ id }) => id !== edit.file.chatId).map((folder) => (
-              <option key={folder.id} value={folder.id}>{getFolderChain(organization, folders, folder.id).map(({ title }) => title).join(' / ')}</option>
-            ))}
-          </select>}
-          <div className={styles.selectionActions}>
-            <Button size="smaller" color="translucent" onClick={() => setEdit(undefined)}>{lang('Close')}</Button>
-            <Button size="smaller" color={edit.mode === 'delete' ? 'danger' : 'primary'}
-              disabled={busy || (edit.mode === 'move' && (value || ownerId) === edit.file.chatId)}
-              onClick={() => {
-                if (edit.mode === 'rename') onLabel(edit.file.id, { alias: value });
-                else onMutate(edit.file.id, edit.mode, value || undefined);
-                setEdit(undefined);
-              }}>{lang(edit.mode === 'rename' ? 'XydriveSaveName' : edit.mode === 'move' ? 'XydriveMove' : 'XydriveDelete')}</Button>
+        <Modal
+          isOpen
+          isSlim
+          hasCloseButton
+          title={lang(editTitle)}
+          onClose={() => setEdit(undefined)}
+        >
+          <div className={styles.editPanel}>
+            <strong dir="auto">{getFileLabel(organization, edit.file)?.alias || edit.file.name}</strong>
+            <p className={styles.scope}>{lang(editDescription)}</p>
+            {edit.mode === 'rename' && (
+              <input
+                className={styles.editInput}
+                aria-label={lang('XydriveRename')}
+                value={value}
+                maxLength={255}
+                onInput={(event) => setValue(event.currentTarget.value)}
+              />
+            )}
+            {edit.mode === 'move' && (
+              <select
+                className={styles.editInput}
+                aria-label={lang('XydriveDestination')}
+                value={value}
+                onChange={(event) => setValue(event.currentTarget.value)}
+              >
+                <option value="">{lang(edit.file.chatId === ownerId ? 'XydriveChooseFolder' : 'XydriveRoot')}</option>
+                {managedFolders.filter(({ id }) => id !== edit.file.chatId).map(({ id }) => (
+                  <option key={id} value={id}>{folderPaths.get(id)?.title}</option>
+                ))}
+              </select>
+            )}
+            <div className={styles.selectionActions}>
+              <Button size="smaller" color="translucent" onClick={() => setEdit(undefined)}>{lang('Close')}</Button>
+              <Button
+                size="smaller"
+                color={edit.mode === 'delete' ? 'danger' : 'primary'}
+                disabled={busy || (edit.mode === 'move' && (value || ownerId) === edit.file.chatId)}
+                onClick={() => {
+                  if (edit.mode === 'rename') onLabel(edit.file.id, { alias: value });
+                  else onMutate(edit.file.id, edit.mode, value || undefined);
+                  setEdit(undefined);
+                }}
+              >
+                {lang(edit.mode === 'rename' ? 'XydriveSaveName' : editTitle)}
+              </Button>
+            </div>
           </div>
-        </section>
+        </Modal>
       )}
       {mutationStatus && (
-        <p className={styles.scope} role="status">{lang(mutationStatus === 'working' ? 'XydriveMutationWorking'
-          : mutationStatus === 'complete' ? 'XydriveMutationComplete'
-          : mutationStatus === 'copied' ? 'XydriveMutationCopied'
-          : mutationStatus === 'copyUnknown' ? 'XydriveMutationCopyUnknown'
-          : mutationStatus === 'deleteUnknown' ? 'XydriveMutationDeleteUnknown'
-          : mutationStatus === 'wait' ? 'XydriveWait' : 'XydriveMutationError')}</p>
+        <p className={styles.scope} role="status">
+          {lang(mutationStatus === 'working' ? 'XydriveMutationWorking'
+            : mutationStatus === 'complete' ? 'XydriveMutationComplete'
+              : mutationStatus === 'copied' ? 'XydriveMutationCopied'
+                : mutationStatus === 'copyUnknown' ? 'XydriveMutationCopyUnknown'
+                  : mutationStatus === 'deleteUnknown' ? 'XydriveMutationDeleteUnknown'
+                    : mutationStatus === 'wait' ? 'XydriveWait' : 'XydriveMutationError')}
+        </p>
       )}
-      <p className={styles.scope} aria-live="polite">
-        {lang(isComplete ? 'XydriveCompleteScope' : 'XydrivePartialScope')}
-      </p>
-      <div className={styles.statusBar}>
-        <span>{lang('XydriveShowing')}: {lang.number(visibleFiles.length)} / {lang.number(files.length)}</span>
-        {visibleSelection.ids.size > 0 && (
-          <span>{lang('XydriveSelected')}: {lang.number(visibleSelection.ids.size)}</span>
-        )}
-        <div className={styles.selectionActions}>
-          {visibleIds.length > 0 && (
-            <Button size="tiny" color="translucent" onClick={selectAll}>{lang('XydriveSelectVisible')}</Button>
-          )}
-          {visibleSelection.ids.size > 0 && (
-            <Button size="tiny" color="translucent" onClick={() => {
-              visibleFiles.filter(({ id }) => visibleSelection.ids.has(id)).forEach(enqueueXydriveDownload);
-            }}
+      {visibleSelection.ids.size > 0 && (
+        <div className={styles.selectionBar}>
+          <strong>
+            {lang('XydriveSelected')}
+            {' '}
+            ·
+            {' '}
+            {lang.number(visibleSelection.ids.size)}
+          </strong>
+          <div className={styles.selectionActions}>
+            <Button
+              size="tiny"
+              color="translucent"
+              onClick={() => {
+                visibleFiles.filter(({ id }) => visibleSelection.ids.has(id)).forEach(enqueueXydriveDownload);
+              }}
             >
               {lang('XydriveTransferDownloadSelected')}
             </Button>
-          )}
-          {visibleSelection.ids.size > 0 && (
+            <Button
+              size="tiny"
+              color="translucent"
+              onClick={() => copyNames(visibleFiles.filter(({ id }) => visibleSelection.ids.has(id)))}
+            >
+              {lang('XydriveCopyNames')}
+            </Button>
             <Button size="tiny" color="translucent" onClick={() => setSelection(EMPTY_XYDRIVE_SELECTION)}>
               {lang('XydriveClearSelection')}
             </Button>
-          )}
+          </div>
         </div>
-      </div>
-      <div className={buildClassName(styles.body, details && styles.withDetails)}>
-        <div className={styles.collection}>
-          {!visibleFiles.length && hasFilter && (
-            <div className={styles.empty}>
-              <Icon name="search" />
-              <p>{lang(isComplete ? 'XydriveNoMatches' : 'XydriveNoLoadedMatches')}</p>
-              <Button size="smaller" color="translucent" onClick={clearFilters}>{lang('XydriveClearFilters')}</Button>
+      )}
+      <div className={buildClassName(styles.body, details && !isMobile && styles.withDetails)}>
+        <div
+          className={styles.collection}
+          ref={scrollRef}
+          aria-busy={isLoading}
+          onScroll={menuId ? () => setMenuId(undefined) : undefined}
+        >
+          {view === 'list' && (visibleFolders.length > 0 || visibleFiles.length > 0) && (
+            <div className={styles.columnHead} aria-hidden="true">
+              <span>{lang('XydriveSortName')}</span>
+              <span className={styles.dateColumn}>{lang('XydriveSortDate')}</span>
+              <span className={styles.sizeColumn}>{lang('XydriveSortSize')}</span>
+              <span className={styles.actionColumn} />
             </div>
+          )}
+          {visibleFolders.length > 0 && (
+            <section className={styles.group} aria-label={lang('XydriveFolders')}>
+              {view === 'grid' && <h2 className={styles.groupTitle}>{lang('XydriveFolders')}</h2>}
+              <ul className={buildClassName(styles.files, view === 'grid' ? styles.grid : styles.list)}>
+                {visibleFolders.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      className={styles.folder}
+                      type="button"
+                      onClick={() => onOpenFolder(item.id)}
+                      title={item.title}
+                    >
+                      <span className={styles.folderMark}><Icon name="folder-filled" /></span>
+                      <span className={styles.fileText}>
+                        <span className={styles.fileTitle}>
+                          <span className={styles.name} dir="auto">{item.title}</span>
+                          <span className={styles.labelMarks} aria-hidden="true">
+                            {organization.folderLabels?.[item.id]?.favorite && <Icon name="star-regular-filled" />}
+                            {organization.folderLabels?.[item.id]?.pinned && <Icon name="pin" />}
+                          </span>
+                        </span>
+                        <span className={styles.meta} dir="auto">
+                          {isRecursiveSearch
+                            ? folderPaths.get(item.id)?.title
+                            : lang(item.isManaged ? 'XydriveManagedFolder' : 'XydriveMountedChannel')}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {!visibleFiles.length && !visibleFolders.length && !isLoading && !loadError && (
+            <div className={styles.empty}>
+              <Icon name={hasFilter ? 'search' : 'folder'} className={styles.detailIcon} />
+              <p>
+                {lang(hasFilter ? resultsAreComplete ? 'XydriveNoMatches' : 'XydriveNoLoadedMatches'
+                  : hasMore ? 'XydriveNoFilesYet' : emptyLabel)}
+              </p>
+              {hasFilter ? (
+                <Button size="smaller" color="translucent" onClick={clearFilters}>{lang('XydriveClearFilters')}</Button>
+              ) : onUpload && (
+                <Button size="smaller" color="translucent-bordered" onClick={onUpload}>{lang('XydriveUpload')}</Button>
+              )}
+            </div>
+          )}
+          {view === 'grid' && visibleFiles.length > 0 && visibleFolders.length > 0 && (
+            <h2 className={styles.groupTitle}>{lang('XydriveFolderFiles')}</h2>
           )}
           {visibleFiles.length > 0 && (
             <ul
@@ -281,6 +520,12 @@ const XydriveExplorer = ({
             >
               {visibleFiles.map((file) => {
                 const isSelected = visibleSelection.ids.has(file.id);
+                const canManage = file.chatId === ownerId || managedFolders.some(({ id }) => id === file.chatId);
+                const label = getFileLabel(organization, file);
+                const name = label?.alias || file.name;
+                const date = new Date(file.date * 1000).toLocaleDateString();
+                const size = file.size === undefined ? lang('XydriveUnknownSize') : formatFileSize(lang, file.size);
+                const location = file.chatId === ownerId ? lang('XydriveRoot') : folderPaths.get(file.chatId)?.title;
                 return (
                   <li
                     key={file.id}
@@ -291,45 +536,45 @@ const XydriveExplorer = ({
                       data-xydrive-file="true"
                       className={styles.fileMain}
                       aria-pressed={isSelected}
-                      title={file.name}
-                      onClick={(event) => handleFileClick(event, file)}
-                      onDoubleClick={() => {
-                        if (file.previewKind && !previewingId) onPreview(file);
+                      title={name}
+                      onClick={(event) => {
+                        if (isTouchScreen && !visibleSelection.ids.size && event.detail) openFile(file);
+                        else handleFileClick(event, file);
+                      }}
+                      onDoubleClick={() => { if (!isTouchScreen) openFile(file); }}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return;
+                        event.preventDefault();
+                        openFile(file);
                       }}
                       onContextMenu={(event) => {
                         event.preventDefault();
+                        menuTriggerRef.current = event.currentTarget;
                         setMenuId(file.id);
                       }}
                     >
                       <XydriveThumbnail file={file} icon={CATEGORY_ICONS[file.category]} observe={observe} />
                       <span className={styles.fileText}>
-                        <span className={styles.name} dir="auto">{file.name}</span>
-                        {(getFileLabel(organization, file)?.favorite || getFileLabel(organization, file)?.pinned) && (
-                          <span className={styles.labelMarks}>
-                            {getFileLabel(organization, file)?.favorite && <Icon name="star-regular-filled" />}
-                            {getFileLabel(organization, file)?.pinned && <Icon name="pin" />}
+                        <span className={styles.fileTitle}>
+                          <span className={styles.name} dir="auto">{name}</span>
+                          <span className={styles.labelMarks} aria-hidden="true">
+                            {label?.favorite && <Icon name="star-regular-filled" />}
+                            {label?.pinned && <Icon name="pin" />}
                           </span>
-                        )}
-                        <span className={styles.meta}>
-                          {lang(CATEGORY_LABELS[file.category])} · {file.size === undefined
-                            ? lang('XydriveUnknownSize') : formatFileSize(lang, file.size)}
+                        </span>
+                        <span className={styles.meta} dir="auto">
+                          {isRecursiveSearch || !indexedFiles ? location : lang(CATEGORY_LABELS[file.category])}
+                          {view === 'grid' && ` · ${size}`}
                         </span>
                       </span>
                     </button>
+                    {view === 'list' && (
+                      <>
+                        <span className={styles.dateColumn}>{date}</span>
+                        <span className={styles.sizeColumn}>{size}</span>
+                      </>
+                    )}
                     <div className={styles.fileActions}>
-                      {file.previewKind && (
-                        <button
-                          type="button"
-                          className={styles.controlButton}
-                          aria-label={lang('XydrivePreview')}
-                          title={lang('XydrivePreview')}
-                          disabled={Boolean(previewingId)}
-                          onClick={() => onPreview(file)}
-                        >
-                          <Icon name={previewingId === file.id ? 'reload-arrows'
-                            : file.previewKind === 'audio' ? 'play' : 'eye'} />
-                        </button>
-                      )}
                       <button
                         type="button"
                         className={styles.controlButton}
@@ -348,7 +593,10 @@ const XydriveExplorer = ({
                           aria-label={lang('XydriveFileActions')}
                           aria-haspopup="menu"
                           aria-expanded={menuId === file.id}
-                          onClick={() => setMenuId(menuId === file.id ? undefined : file.id)}
+                          onClick={(event) => {
+                            menuTriggerRef.current = event.currentTarget;
+                            setMenuId(menuId === file.id ? undefined : file.id);
+                          }}
                         >
                           <Icon name="more" />
                         </button>
@@ -357,8 +605,14 @@ const XydriveExplorer = ({
                             isOpen
                             autoClose
                             ariaLabel={lang('XydriveFileActions')}
-                            positionX={lang.isRtl ? 'left' : 'right'}
-                            positionY="bottom"
+                            ref={menuRef}
+                            anchor={getMenuAnchor}
+                            getTriggerElement={() => menuTriggerRef.current}
+                            getRootElement={() => scrollRef.current?.ownerDocument.documentElement}
+                            getMenuElement={() => menuRef.current}
+                            getLayout={() => ({ withPortal: true })}
+                            withPortal
+                            withMaxHeight
                             onClose={() => setMenuId(undefined)}
                           >
                             {file.previewKind && (
@@ -369,16 +623,36 @@ const XydriveExplorer = ({
                             <MenuItem icon="download" onClick={() => enqueueXydriveDownload(file)}>
                               {lang('XydriveTransferDownload')}
                             </MenuItem>
-                            <MenuItem icon="info" onClick={() => setDetailsId(file.id)}>{lang('XydriveDetails')}</MenuItem>
-                            <MenuItem icon="edit" onClick={() => startEdit(file, 'rename')}>{lang('XydriveRename')}</MenuItem>
-                            <MenuItem icon="star-outline" onClick={() => onLabel(file.id, { favorite: !getFileLabel(organization, file)?.favorite })}>
-                              {lang(getFileLabel(organization, file)?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}
+                            <MenuItem icon="copy" onClick={() => copyNames([file])}>{lang('XydriveCopyName')}</MenuItem>
+                            <MenuItem icon="info" onClick={() => setDetailsId(file.id)}>
+                              {lang('XydriveDetails')}
                             </MenuItem>
-                            <MenuItem icon="pin" onClick={() => onLabel(file.id, { pinned: !getFileLabel(organization, file)?.pinned })}>
-                              {lang(getFileLabel(organization, file)?.pinned ? 'XydriveUnpin' : 'XydrivePin')}
+                            <MenuItem
+                              icon="star-outline"
+                              onClick={() => onLabel(file.id, { favorite: !label?.favorite })}
+                            >
+                              {lang(label?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}
                             </MenuItem>
-                            <MenuItem icon="folder" disabled={busy} onClick={() => startEdit(file, 'move')}>{lang('XydriveMove')}</MenuItem>
-                            <MenuItem destructive disabled={busy} onClick={() => startEdit(file, 'delete')}>{lang('XydriveDelete')}</MenuItem>
+                            <MenuItem icon="pin" onClick={() => onLabel(file.id, { pinned: !label?.pinned })}>
+                              {lang(label?.pinned ? 'XydriveUnpin' : 'XydrivePin')}
+                            </MenuItem>
+                            <MenuItem icon="edit" onClick={() => startEdit(file, 'rename')}>
+                              {lang('XydriveRename')}
+                            </MenuItem>
+                            {canManage && (
+                              <>
+                                <MenuItem
+                                  icon="folder"
+                                  disabled={busy || (file.chatId === ownerId && !managedFolders.length)}
+                                  onClick={() => startEdit(file, 'move')}
+                                >
+                                  {lang('XydriveMove')}
+                                </MenuItem>
+                                <MenuItem destructive disabled={busy} onClick={() => startEdit(file, 'delete')}>
+                                  {lang('XydriveDelete')}
+                                </MenuItem>
+                              </>
+                            )}
                             <MenuItem icon="check" onClick={() => toggleFile(file.id)}>
                               {lang(isSelected ? 'XydriveDeselectFile' : 'XydriveSelectFile')}
                             </MenuItem>
@@ -394,8 +668,26 @@ const XydriveExplorer = ({
               })}
             </ul>
           )}
+          <div className={styles.pagination}>
+            {isLoading && <Loading />}
+            {loadError && <p className={styles.scope} role="alert">{lang(loadError)}</p>}
+            {visibleFiles.length < matchingFiles.length && (
+              <Button
+                size="smaller"
+                color="translucent-bordered"
+                onClick={() => setResultLimit(resultLimit + RESULT_BATCH_SIZE)}
+              >
+                {lang('XydriveShowResults')}
+              </Button>
+            )}
+            {!isLoading && (loadError || hasMore) && (
+              <Button size="smaller" color="translucent" onClick={onLoadMore}>
+                {lang(loadError ? 'XydriveRetry' : 'XydriveLoadMore')}
+              </Button>
+            )}
+          </div>
         </div>
-        {details && (
+        {details && !isMobile && (
           <aside className={styles.details} aria-label={lang('XydriveDetails')}>
             <div className={styles.detailsHeader}>
               <strong>{lang('XydriveDetails')}</strong>
@@ -408,43 +700,34 @@ const XydriveExplorer = ({
                 onClick={() => setDetailsId(undefined)}
               />
             </div>
-            <Icon name={CATEGORY_ICONS[details.category]} className={styles.detailIcon} />
-            <strong className={styles.detailName} dir="auto">{details.name}</strong>
-            <div className={styles.selectionActions}>
-              <Button size="tiny" color="translucent" onClick={() => startEdit(details, 'rename')}>{lang('XydriveRename')}</Button>
-              <Button size="tiny" color="translucent" onClick={() => onLabel(details.id, { favorite: !getFileLabel(organization, details)?.favorite })}>{lang(getFileLabel(organization, details)?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}</Button>
-              <Button size="tiny" color="translucent" onClick={() => onLabel(details.id, { pinned: !getFileLabel(organization, details)?.pinned })}>{lang(getFileLabel(organization, details)?.pinned ? 'XydriveUnpin' : 'XydrivePin')}</Button>
-            </div>
-            <dl>
-              <dt>{lang('XydriveSortType')}</dt>
-              <dd>{lang(CATEGORY_LABELS[details.category])}</dd>
-              <dt>{lang('XydriveSortSize')}</dt>
-              <dd>{details.size === undefined ? lang('XydriveUnknownSize') : formatFileSize(lang, details.size)}</dd>
-              <dt>{lang('XydriveSortDate')}</dt>
-              <dd>{new Date(details.date * 1000).toLocaleDateString()}</dd>
-              <dt>{lang('XydriveMimeType')}</dt>
-              <dd>{details.mimeType || lang('XydriveUnknownValue')}</dd>
-            </dl>
-            {details.previewKind && (
-              <Button
-                size="smaller"
-                isLoading={previewingId === details.id}
-                disabled={Boolean(previewingId)}
-                onClick={() => onPreview(details)}
-              >
-                {lang('XydrivePreview')}
-              </Button>
-            )}
-            <Button size="smaller" onClick={() => enqueueXydriveDownload(details)}>
-              {lang('XydriveTransferDownload')}
-            </Button>
-            <Button size="smaller" color="translucent" onClick={() => onOpenMessage(details)}>
-              {lang('XydriveOpenMessage')}
-            </Button>
+            {renderDetails(details)}
           </aside>
         )}
       </div>
-      {isLoading && files.length > 0 && <p className={styles.scope}>{lang('XydriveLoadingOlder')}</p>}
+      {details && isMobile && (
+        <Modal isOpen isSlim hasCloseButton title={lang('XydriveDetails')} onClose={() => setDetailsId(undefined)}>
+          {renderDetails(details)}
+        </Modal>
+      )}
+      <footer className={styles.statusBar}>
+        <span aria-live="polite">
+          {lang('XydriveShowing')}
+          {' '}
+          ·
+          {' '}
+          {lang.number(visibleFolders.length + visibleFiles.length)}
+          {' '}
+          /
+          {' '}
+          {
+            lang.number(visibleFolders.length + matchingFiles.length)
+          }
+        </span>
+        {hasFilter && !resultsAreComplete && <span>{lang('XydriveLoadedOnly')}</span>}
+        {visibleIds.length > 0 && (
+          <Button size="tiny" color="translucent" onClick={selectAll}>{lang('XydriveSelectVisible')}</Button>
+        )}
+      </footer>
     </section>
   );
 };

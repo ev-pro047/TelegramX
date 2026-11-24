@@ -22,6 +22,10 @@ export function buildXydriveChannel(folder: XydriveMount): ApiChat {
 export function upsertXydriveMount(folders: XydriveMount[], folder: XydriveMount): XydriveMount[] {
   const existing = folders.find(({ id }) => id === folder.id);
   if (!existing) return [...folders, folder];
-  if (existing.title === folder.title && existing.accessHash === folder.accessHash) return folders;
-  return folders.map((item) => item.id === folder.id ? folder : item);
+  const isManaged = existing.isManaged || folder.isManaged;
+  if (existing.title === folder.title && existing.accessHash === folder.accessHash
+    && existing.isManaged === isManaged) {
+    return folders;
+  }
+  return folders.map((item) => item.id === folder.id ? { ...folder, isManaged } : item);
 }
