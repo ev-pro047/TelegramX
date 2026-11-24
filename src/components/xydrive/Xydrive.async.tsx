@@ -2,18 +2,19 @@ import { memo, useEffect, useRef } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiChat } from '../../api/types';
-import type { XydriveFile, XydriveIndex, XydriveMount, XydriveMutationStatus, XydriveOrganization, XydriveState } from '../../lib/xydrive/types';
+import type {
+  XydriveFile, XydriveIndex, XydriveMount, XydriveMutationStatus, XydriveOrganization, XydriveState,
+} from '../../lib/xydrive/types';
 import { MediaViewerOrigin } from '../../types';
 
+import { getXydriveMounts } from '../../lib/xydrive/folders';
 import { selectTabState } from '../../global/selectors';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
-import { getXydriveMounts } from '../../lib/xydrive/folders';
 import captureKeyboardListeners from '../../util/captureKeyboardListeners';
 import { Bundles } from '../../util/moduleLoader';
 import { getInitialLocationHash } from '../../util/routing';
 
 import useHistoryBack from '../../hooks/useHistoryBack';
-
 import useLastCallback from '../../hooks/useLastCallback';
 import useModuleLoader from '../../hooks/useModuleLoader';
 
@@ -47,15 +48,16 @@ const XydriveAsync = ({
   const {
     openXydrive, closeXydrive, openChat, focusMessage, loadXydrivePage, selectXydriveSource,
     mountXydriveChannel, unmountXydriveChannel, createXydriveFolder,
-    openXydriveMedia, labelXydriveFile, setXydriveFolderParent, mutateXydriveFile, syncXydriveIndex, cancelXydriveSync,
+    openXydriveMedia, labelXydriveFile, labelXydriveFolder, setXydriveFolderParent,
+    mutateXydriveFile, syncXydriveIndex, cancelXydriveSync,
   } = getActions();
   const isOpen = Boolean(isEnabled && !isScreenLocked && currentUserId && xydriveOwnerId === currentUserId);
   const Xydrive = useModuleLoader(Bundles.Xydrive, 'Xydrive', !isOpen);
-  const initialRouteHandled = useRef(false);
+  const initialRouteHandledRef = useRef(false);
 
   useEffect(() => {
-    if (initialRouteHandled.current || !isSynced || !currentUserId || isScreenLocked) return;
-    initialRouteHandled.current = true;
+    if (initialRouteHandledRef.current || !isSynced || !currentUserId || isScreenLocked) return;
+    initialRouteHandledRef.current = true;
     if (isEnabled && getInitialLocationHash() === '#xydrive' && !isOpen) openXydrive();
   }, [isSynced, currentUserId, isScreenLocked, isEnabled, isOpen, openXydrive]);
 
@@ -78,9 +80,15 @@ const XydriveAsync = ({
   const handleCreate = useLastCallback((title: string, parentId?: string) => {
     if (isOpen) createXydriveFolder({ title, parentId });
   });
-  const handleLabel = useLastCallback((fileId: string, patch: { alias?: string; favorite?: boolean; pinned?: boolean; opened?: boolean }) => {
-    if (isOpen) labelXydriveFile({ fileId, ...patch });
+  const handleLabel = useLastCallback(
+    (fileId: string, patch: { alias?: string; favorite?: boolean; pinned?: boolean }) => {
+      if (isOpen) labelXydriveFile({ fileId, ...patch });
+    },
+  );
+  const handleLabelFolder = useLastCallback((channelId: string, patch: { favorite?: boolean; pinned?: boolean }) => {
+    if (isOpen) labelXydriveFolder({ channelId, ...patch });
   });
+
   const handleMutate = useLastCallback((fileId: string, operation: 'delete' | 'move', destinationId?: string) => {
     if (isOpen) mutateXydriveFile({ fileId, operation, destinationId });
   });
@@ -105,7 +113,8 @@ const XydriveAsync = ({
 
   const handleOpenMessage = useLastCallback((file: XydriveFile) => {
     if (!isOpen || (file.chatId !== currentUserId && !folders?.some(({ id }) => id === file.chatId))) return;
-    const known = [...(drive?.files || []), ...(index?.sources[file.chatId]?.files || [])].some(({ id, mediaId }) => id === file.id && mediaId === file.mediaId);
+    const matches = ({ id, mediaId }: XydriveFile) => id === file.id && mediaId === file.mediaId;
+    const known = drive?.files.some(matches) || index?.sources[file.chatId]?.files.some(matches);
     if (!known) return;
     labelXydriveFile({ fileId: file.id, opened: true });
     closeXydrive();
@@ -136,7 +145,6 @@ const XydriveAsync = ({
 
   return (
     <Xydrive
-      isOpen={isOpen}
       ownerId={isOpen ? currentUserId : undefined}
       drive={isOpen ? drive : undefined}
       sourceId={isOpen ? sourceId : undefined}
@@ -154,6 +162,7 @@ const XydriveAsync = ({
       index={index}
       mutationStatus={mutationStatus}
       onLabel={handleLabel}
+      onLabelFolder={handleLabelFolder}
       onMutate={handleMutate}
       onReparent={handleReparent}
       onSync={() => syncXydriveIndex()}
@@ -192,7 +201,8 @@ export default memo(withGlobal(
       organization: isOpen && global.settings.byKey.xydriveOrganization?.ownerId === global.currentUserId
         ? global.settings.byKey.xydriveOrganization : undefined,
       index: isOpen && tab.xydriveIndex?.ownerId === global.currentUserId ? tab.xydriveIndex : undefined,
-      mutationStatus: isOpen && tab.xydriveMutation?.ownerId === global.currentUserId ? tab.xydriveMutation?.status : undefined,
+      mutationStatus: isOpen && tab.xydriveMutation?.ownerId === global.currentUserId
+        ? tab.xydriveMutation?.status : undefined,
       previewingId: isOpen ? tab.xydriveMediaRequest?.fileId : undefined,
       mediaError: isOpen ? tab.xydriveMediaError : undefined,
       isViewerOpen: isOpen && tab.mediaViewer.origin === MediaViewerOrigin.Xydrive

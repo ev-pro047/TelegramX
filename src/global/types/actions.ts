@@ -417,6 +417,7 @@ export interface ActionPayloads {
   loadXydrivePage: ({ shouldRefresh?: boolean } & WithTabId) | undefined;
   createXydriveFolder: ({ title: string; parentId?: string } & WithTabId);
   labelXydriveFile: ({ fileId: string; alias?: string; favorite?: boolean; pinned?: boolean; opened?: boolean } & WithTabId);
+  labelXydriveFolder: ({ channelId: string; favorite?: boolean; pinned?: boolean } & WithTabId);
   setXydriveFolderParent: ({ channelId: string; parentId?: string } & WithTabId);
   mutateXydriveFile: ({ fileId: string; operation: 'delete' | 'move'; destinationId?: string } & WithTabId);
   syncXydriveIndex: WithTabId | undefined;

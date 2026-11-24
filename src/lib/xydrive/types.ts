@@ -19,6 +19,7 @@ export type XydriveMount = {
   id: string;
   title: string;
   accessHash: string;
+  isManaged?: true;
 };
 
 export type XydriveMountRegistry = {
@@ -45,10 +46,13 @@ export type XydriveFileLabel = {
   lastOpened?: number;
 };
 
+export type XydriveFolderLabel = { favorite?: boolean; pinned?: boolean };
+
 export type XydriveOrganization = {
   ownerId: string;
   parents: Record<string, string>;
   labels: Record<string, XydriveFileLabel>;
+  folderLabels?: Record<string, XydriveFolderLabel>;
 };
 
 export type XydriveIndexSource = {
@@ -61,7 +65,7 @@ export type XydriveIndexSource = {
 export type XydriveIndex = {
   ownerId: string;
   sources: Record<string, XydriveIndexSource>;
-  status: 'idle' | 'syncing' | 'partial' | 'ready' | 'error';
+  status: 'idle' | 'syncing' | 'partial' | 'ready' | 'error' | 'limited';
   requestId?: number;
 };
 

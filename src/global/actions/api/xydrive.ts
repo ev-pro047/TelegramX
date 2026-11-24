@@ -112,7 +112,7 @@ addActionHandler('createXydriveFolder', async (global, actions, payload): Promis
   if (channel) global = updateChat(global, channel.id, channel);
   if (verified) {
     const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
-    const nextFolders = upsertXydriveMount(folders, verified);
+    const nextFolders = upsertXydriveMount(folders, { ...verified, isManaged: true });
     const organization = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
     global = replaceSettings(global, { xydriveMounts: { ownerId, folders: nextFolders },
       xydriveOrganization: setFolderParent(organization, nextFolders, verified.id, parentId) });
@@ -318,7 +318,7 @@ addActionHandler('mutateXydriveFile', async (global, actions, payload): Promise<
   const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
   const source = folders.find(({ id }) => id === file.chatId);
   const destination = folders.find(({ id }) => id === destinationId);
-  if ((file.chatId !== ownerId && !source) || (destinationId && !destination)
+  if ((file.chatId !== ownerId && !source?.isManaged) || (destinationId && !destination?.isManaged)
     || (operation === 'move' && file.chatId === (destinationId || ownerId))) return;
   const id = ++nextRequestId;
   setGlobal(updateTabState(global, { xydriveMutation: { id, ownerId, fileId, status: 'working' } }, tabId));
@@ -370,7 +370,7 @@ addActionHandler('syncXydriveIndex', async (global, actions, payload): Promise<v
     const latest = getGlobal();
     return isXydriveOpen(latest, tabId, ownerId) && latest.byTabId[tabId].xydriveIndex?.requestId === requestId;
   };
-  const publish = (status: 'syncing' | 'partial' | 'ready' | 'error') => {
+  const publish = (status: 'syncing' | 'partial' | 'ready' | 'error' | 'limited') => {
     if (!stillActive()) return;
     setGlobal(updateTabState(getGlobal(), { xydriveIndex: { ownerId, sources: { ...sources }, status, requestId } }, tabId));
   };
@@ -402,5 +402,8 @@ addActionHandler('syncXydriveIndex', async (global, actions, payload): Promise<v
   }
   if (!stillActive()) return;
   const complete = [ownerId, ...folders.map(({ id }) => id)].every((id) => sources[id]?.complete);
-  publish(complete ? 'ready' : failed && !Object.keys(sources).length ? 'error' : 'partial');
+  if (complete) publish('ready');
+  else if (count >= SYNC_FILE_LIMIT) publish('limited');
+  else if (failed && !Object.keys(sources).length) publish('error');
+  else publish('partial');
 });

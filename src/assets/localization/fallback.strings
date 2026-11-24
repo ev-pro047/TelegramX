@@ -4742,7 +4742,7 @@
 "SettingsSearchEmpty" = "Start typing to find a setting";
 "XydriveTitle" = "Xydrive";
 "XydriveBeta" = "Beta";
-"XydriveEnable" = "Enable Xydrive";
+"XydriveEnable" = "Enable Xydrive Beta";
 "XydriveExperimentalDesc" = "Open the experimental personal file workspace from the main menu.";
 "XydriveWelcome" = "Your personal file workspace";
 "XydriveFoundationDesc" = "The experimental workspace is enabled. File browsing and transfers are not available in this build.";
@@ -4778,12 +4778,12 @@
 "XydrivePrivateChannel" = "Private channel";
 "XydriveNoFolders" = "Mount an owned private channel to add your first folder.";
 "XydriveRootFiles" = "Root files";
-"XydriveFolderFiles" = "Folder files";
+"XydriveFolderFiles" = "Files";
 "XydriveUnmount" = "Unmount";
 "XydriveEmptyFolder" = "No supported files found in this folder.";
 "XydriveFolderEnd" = "End of folder history.";
 "XydriveExplorer" = "File explorer";
-"XydriveSearch" = "Search loaded files";
+"XydriveSearch" = "Search files and folders";
 "XydriveFilter" = "Filter file type";
 "XydriveAllTypes" = "All types";
 "XydriveSort" = "Sort files";
@@ -4841,7 +4841,7 @@
 "XydriveTransferClear" = "Clear history";
 "XydriveTransferDownload" = "Download";
 "XydriveTransferDownloadSelected" = "Download selected";
-"XydriveTransferDuplicate" = "A matching filename is already loaded in this folder. Telegram allows both copies. Continue?";
+"XydriveTransferDuplicate" = "Some files have the same name in this selection or folder. Upload all copies?";
 "XydriveTransferLimit" = "Up to 100 queued or active transfers per tab session.";
 
 "XydriveTransferQueueFull" = "Transfer queue is full. Wait for a transfer to finish.";
@@ -4894,3 +4894,25 @@
 "XydriveStorageScope" = "Known file sizes only; not a Telegram storage quota or physical disk usage.";
 "XydriveUnknownSizes" = "files with unknown size.";
 "XydriveStorageTypes" = "Storage by type";
+
+"XydriveNavigation" = "Drive navigation";
+"XydriveFolderActions" = "Folder actions";
+"XydriveSearchChannels" = "Search channels";
+"XydriveUnmountDesc" = "Remove this folder from the drive. Its Telegram channel and files stay available in your chats.";
+"XydriveIndexError" = "Could not scan Telegram history. Try again.";
+"XydriveIndexLimit" = "The drive reached its scan limit. Open folders and load older messages to see more files.";
+"XydriveEmptyCollection" = "No items in this collection yet.";
+"XydriveLocation" = "Location";
+"XydriveOriginalName" = "Original filename";
+"XydriveShowResults" = "Show more results";
+"XydriveLoadedOnly" = "Loaded items only";
+"XydriveDropFiles" = "Drop files to upload";
+
+"XydriveLastOpened" = "Last opened";
+"XydriveCopyName" = "Copy filename";
+"XydriveCopyNames" = "Copy filenames";
+"XydriveNamesCopied" = "Copied to clipboard";
+"XydriveClipboardError" = "Could not copy to clipboard";
+
+"XydriveManagedFolder" = "Drive folder";
+"XydriveMountedChannel" = "Mounted channel";
