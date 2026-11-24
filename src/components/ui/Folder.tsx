@@ -24,6 +24,7 @@ import styles from './Folder.module.scss';
 type OwnProps = {
   className?: string;
   title: TeactNode;
+  fullTitle?: string;
   isActive?: boolean;
   isBlocked?: boolean;
   badgeCount?: number;
@@ -39,6 +40,7 @@ type OwnProps = {
 const Folder = ({
   className,
   title,
+  fullTitle,
   isActive,
   isBlocked,
   badgeCount,
@@ -85,6 +87,15 @@ const Folder = ({
   return (
     <div
       className={buildClassName(styles.folder, isActive && styles.active, className)}
+      role={onClick ? 'button' : undefined}
+      aria-current={isActive || undefined}
+      tabIndex={onClick ? 0 : undefined}
+      title={fullTitle}
+      onKeyDown={onClick ? (event) => {
+        if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        onClick(clickArg!);
+      } : undefined}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
@@ -105,10 +116,10 @@ const Folder = ({
         )}
       </div>
       <span className={styles.inner}>
-        <div className={styles.title}>
+        <span className={styles.title} dir="auto" aria-label={fullTitle}>
           {isBlocked && <Icon name="lock-filled" className={styles.blocked} />}
           {title}
-        </div>
+        </span>
       </span>
 
       {contextActions && contextMenuAnchor !== undefined && (

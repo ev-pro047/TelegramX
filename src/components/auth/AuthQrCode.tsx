@@ -142,6 +142,7 @@ const AuthCode = ({
           color="translucent"
           className="auth-close"
           iconName="close"
+          ariaLabel={lang('Close')}
           onClick={handleBackNavigation}
         />
       )}
@@ -155,7 +156,6 @@ const AuthCode = ({
               key="qr-container"
               className="qr-container"
               ref={qrCodeRef}
-              style={`width: ${QR_SIZE}px; height: ${QR_SIZE}px`}
             />
             <AnimatedIcon
               tgsUrl={LOCAL_TGS_URLS.QrPlane}
@@ -168,6 +168,7 @@ const AuthCode = ({
           {!isQrMounted && <div className="qr-loading"><Loading /></div>}
         </div>
         <h1>{lang('LoginQRTitle')}</h1>
+        <p className="auth-client-note">{lang('TelegramXClientIdentity')}</p>
         <ol>
           <li><span>{lang('LoginQRHelp1')}</span></li>
           <li><span>{lang('LoginQRHelp2', undefined, { withNodes: true, withMarkdown: true })}</span></li>

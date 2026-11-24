@@ -1,4 +1,9 @@
+@use "../../styles/mixins";
+
 #Main {
+  --pane-gutter: 1rem;
+  --left-drawer-width: min(26.5rem, 58vw);
+
   isolation: isolate;
   position: relative;
 
@@ -9,14 +14,10 @@
   text-align: left;
 
   &.folders-sidebar-visible {
-    grid-template-columns: auto auto 1fr;
+    grid-template-columns: auto auto minmax(0, 1fr);
   }
 
-  @media (min-width: 1276px) {
-    position: relative;
-  }
-
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     // iOS reveal-scrolls the document when the keyboard opens; a `--vh`-based height races that scroll and
     // leaves a bare strip below the wallpaper. Pin `#Main` to the layout viewport so it always covers the
     // visible area regardless of timing. (Ported from scroll-fixes-after-composer-redesign.)
@@ -27,9 +28,9 @@
     left: 0;
   }
 
-  @media (min-width: 926px) {
+  @media (width > 925px) {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: 100%;
   }
 }
@@ -96,7 +97,7 @@
 
   corner-shape: squircle;
 
-  @media (min-width: 926px) {
+  @media (width > 925px) {
     --left-column-max-width: 40vw;
 
     .folders-sidebar-visible & {
@@ -107,23 +108,23 @@
     }
   }
 
-  @media (min-width: 1276px) {
-    --left-column-max-width: 33vw;
+  @media (width > 1275px) {
+    --left-column-max-width: min(33vw, 30rem);
 
     width: 25vw;
 
     .folders-sidebar-visible & {
-      --left-column-max-width: calc(33vw - var(--folders-sidebar-width));
+      --left-column-max-width: calc(min(33vw, 30rem) - var(--folders-sidebar-width));
     }
   }
 
-  @media (max-width: 925px) {
+  @include mixins.overlay-left-pane() {
     position: fixed;
     top: 1rem;
     left: 1rem;
     transform: translate3d(calc(-100% - 1rem), 0, 0);
 
-    width: 26.5rem !important;
+    width: var(--left-drawer-width) !important;
     height: calc(var(--vh, 1vh) * 100 - 2rem);
     margin: 0;
 
@@ -186,16 +187,16 @@
     }
   }
 
-  @media (max-width: 600px) {
-    --left-column-max-width: calc(100vw - env(safe-area-inset-left));
+  @include mixins.single-pane() {
+    --left-column-max-width: calc(100% - var(--safe-area-left) - var(--safe-area-right));
 
     top: 0;
     bottom: 0;
-    left: env(safe-area-inset-left) !important;
+    left: var(--safe-area-left) !important;
     transform: translate3d(-100%, 0, 0);
 
-    width: calc(100vw - env(safe-area-inset-left)) !important;
-    max-width: none;
+    width: var(--left-column-max-width) !important;
+    min-width: 0;
     height: auto;
     border-radius: 0;
 
@@ -227,7 +228,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     height: auto;
   }
 }
@@ -238,6 +239,7 @@
 
 #MiddleColumn {
   grid-area: 1 / 2;
+  min-width: 0;
 
   .folders-sidebar-visible & {
     grid-column: 3;
@@ -251,7 +253,7 @@
     }
   }
 
-  @media (max-width: 925px) {
+  @include mixins.overlay-left-pane() {
     position: fixed;
     top: 0;
     right: 0;
@@ -266,7 +268,9 @@
     }
 
     #Main.left-column-open & {
-      transform: translate3d(calc(var(--folders-sidebar-width) + 28.5rem), 0, 0);
+      --left-drawer-offset: calc(var(--folders-sidebar-width) + var(--left-drawer-width) + 2 * var(--pane-gutter));
+
+      transform: translate3d(var(--left-drawer-offset), 0, 0);
     }
 
     body.no-right-column-animations #Main.right-column-open &,
@@ -275,7 +279,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     border-left: none;
 
     #Main.left-column-open & {
@@ -288,7 +292,7 @@
   }
 }
 
-@media (max-width: 925px) {
+@include mixins.overlay-left-pane() {
   .folders-sidebar-visible {
     #FoldersSidebar {
       position: fixed;

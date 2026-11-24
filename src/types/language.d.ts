@@ -2377,6 +2377,9 @@ export interface LangPair {
   'SettingsDataClearMediaCache': undefined;
   'SettingsDataClearMediaCacheDescription': undefined;
   'SettingsDataClearMediaDone': undefined;
+  'SettingsDataClearMediaError': undefined;
+  'SettingsDataClearCacheConfirmation': undefined;
+  'SettingsLocalStorage': undefined;
   'LeaveGroupAppointOwner': undefined;
   'LeaveGroupAdmins': undefined;
   'LeaveGroupMembers': undefined;
@@ -3803,6 +3806,12 @@ export interface LangPair {
   'XydriveKeyboardSelect': undefined;
   'XydriveKeyboardSearch': undefined;
   'XydriveTouchSelect': undefined;
+  'SettingsGroupAccountSecurity': undefined;
+  'SettingsGroupPreferences': undefined;
+  'SettingsGroupStorageOrganization': undefined;
+  'SettingsGroupAppearance': undefined;
+  'SettingsProfileTabs': undefined;
+  'TelegramXClientIdentity': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {

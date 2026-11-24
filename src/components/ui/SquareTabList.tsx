@@ -19,6 +19,7 @@ import './SquareTabList.scss';
 export type TabWithProperties = {
   id?: number;
   title: TeactNode;
+  fullTitle?: string;
   icon?: IconName;
   badgeCount?: number;
   isBlocked?: boolean;

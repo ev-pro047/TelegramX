@@ -169,7 +169,15 @@ const SearchInput = ({
         {isLoading && !withBackIcon ? (
           <Loading color={spinnerColor} backgroundColor={spinnerBackgroundColor} onClick={onSpinnerClick} />
         ) : withBackIcon ? (
-          <Icon name="arrow-left" className="back-icon" onClick={onReset} />
+          <Button
+            round
+            size="tiny"
+            color="translucent"
+            iconName={lang.isRtl ? 'arrow-right' : 'arrow-left'}
+            className="back-icon"
+            ariaLabel={lang('Back')}
+            onClick={onReset}
+          />
         ) : (
           <Icon name="search" className="search-icon" />
         )}
@@ -181,6 +189,7 @@ const SearchInput = ({
         type="text"
         dir="auto"
         placeholder={placeholder || lang('Search')}
+        aria-label={placeholder || lang('Search')}
         className="form-control"
         value={value}
         disabled={disabled}
@@ -230,6 +239,7 @@ const SearchInput = ({
               size="tiny"
               color="translucent"
               iconName="close"
+              ariaLabel={lang(value ? 'Clear' : 'Close')}
               onClick={onReset}
             />
           )

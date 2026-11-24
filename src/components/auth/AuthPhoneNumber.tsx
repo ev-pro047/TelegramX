@@ -251,12 +251,14 @@ const AuthPhoneNumber = ({
           color="translucent"
           className="auth-close"
           iconName="close"
+          ariaLabel={lang('Close')}
           onClick={handleBackNavigation}
         />
       )}
       <div className="auth-form">
         <div id="logo" />
-        <h1>{lang('AuthTitle')}</h1>
+        <h1>TelegramX</h1>
+        <p className="auth-client-note">{lang('TelegramXClientIdentity')}</p>
         <p className="note">{lang('StartText')}</p>
         <form className="form" action="" onSubmit={handleSubmit}>
           <CountryCodeInput
@@ -292,7 +294,10 @@ const AuthPhoneNumber = ({
                 {lang('LoginNext')}
               </Button>
             ) : (
-              <Loading />
+              <div role="status" className="auth-connection-status">
+                <Loading />
+                {lang('Connecting')}
+              </div>
             )
           )}
           {isAuthReady && (

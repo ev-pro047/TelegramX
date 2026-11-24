@@ -18,7 +18,7 @@
   }
 
   .left-search-tab-list {
-    margin: 0.5rem var(--left-search-inset) 0;
+    margin: 0.625rem var(--left-search-inset) 0;
   }
 
   &--content {
@@ -66,13 +66,13 @@
   .section-heading {
     position: relative;
 
-    margin-bottom: 1rem;
-    padding-top: 0.625rem;
-    padding-left: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem 0.625rem 0;
 
-    font-size: 1rem;
-    font-weight: var(--font-weight-medium);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-secondary);
+    overflow-wrap: anywhere;
 
     &-first {
       padding-top: 0.75rem;

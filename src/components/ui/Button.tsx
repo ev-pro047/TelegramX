@@ -175,6 +175,9 @@ const Button = ({
   );
 
   const handleClick = useLastCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    // Pointer clicks already run on mousedown in the fast path
+    if (e.type === 'click' && !IS_TOUCH_ENV && !noFastClick && e.detail > 0) return;
+
     if ((allowDisabledClick || !isNotInteractive) && onClick) {
       onClick(e);
     }
@@ -276,7 +279,7 @@ const Button = ({
       id={id}
       type={type}
       className={fullClassName}
-      onClick={IS_TOUCH_ENV || noFastClick ? handleClick : undefined}
+      onClick={handleClick}
       onContextMenu={onContextMenu}
       onMouseDown={handleMouseDown}
       onMouseUp={onMouseUp}

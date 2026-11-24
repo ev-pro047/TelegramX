@@ -1,12 +1,15 @@
 .Auth {
-  height: 100%;
+  height: calc(100 * var(--vh, 1vh));
 }
 
 .auth-form {
   width: 100%;
   max-width: 25.5rem;
   margin: 0 auto;
-  padding: 6rem 1rem 1rem;
+  padding-top: max(var(--safe-area-top), clamp(1.5rem, 9vh, 5.5rem));
+  padding-right: max(1rem, var(--safe-area-right));
+  padding-bottom: max(1rem, var(--safe-area-bottom));
+  padding-left: max(1rem, var(--safe-area-left));
 
   text-align: center;
 
@@ -14,22 +17,16 @@
   .AvatarEditable label {
     display: block;
 
-    width: 7.5rem;
-    height: 7.5rem;
+    width: clamp(4rem, 18vh, 8rem);
+    height: clamp(4rem, 18vh, 8rem);
     margin-right: auto;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.125rem;
     margin-left: auto;
 
     body.is-tauri & {
       width: 6rem;
       height: 6rem;
-      margin-bottom: 1.75rem;
-    }
-
-    @media (min-width: 600px) and (min-height: 450px) {
-      width: 10rem;
-      height: 10rem;
-      margin-bottom: 2.5rem;
+      margin-bottom: 1.125rem;
     }
   }
 
@@ -39,40 +36,32 @@
   }
 
   h1 {
-    font-size: 1.25rem;
-    line-height: 1;
-
-    @media (min-width: 600px) {
-      font-size: 2rem;
-      line-height: 1.5;
-    }
+    font-size: clamp(1.25rem, 5vw, 1.875rem);
+    line-height: 1.2;
   }
 
   .note {
-    margin-bottom: 2.5rem;
-    font-size: 0.875rem;
+    margin-bottom: clamp(1rem, 4vh, 2rem);
+    font-size: 0.9375rem;
     line-height: 1.35;
     color: var(--color-text-secondary);
 
     @media (min-width: 600px) {
-      margin-bottom: 3rem;
       font-size: 1rem;
     }
   }
 
-  body.is-tauri #auth-phone-number-form & {
-    padding-top: 3rem;
-
-    .form {
-      min-height: 0;
-    }
+  &.qr {
+    padding-top: max(var(--safe-area-top), clamp(1.5rem, 7vh, 4rem));
   }
 
-  @media (min-width: 600px) and (min-height: 450px) {
-    padding: 6.8125rem 1.5rem 1.5rem;
+  @media (max-height: 450px) {
+    padding-top: max(var(--safe-area-top), 1.25rem);
 
-    &.qr {
-      padding-top: 4rem;
+    #logo {
+      width: 3.5rem;
+      height: 3.5rem;
+      margin-bottom: 0.75rem;
     }
   }
 }
@@ -84,12 +73,6 @@
 #auth-qr-form {
   overflow-y: auto;
   height: 100%;
-}
-
-#auth-phone-number-form {
-  .form {
-    min-height: 26.25rem;
-  }
 }
 
 #auth-code-form,
@@ -124,7 +107,7 @@
 }
 
 .auth-button {
-  margin-top: 2.5rem;
+  margin-top: clamp(0.75rem, 3vh, 1.5rem);
 }
 
 .auth-button + .auth-button {
@@ -138,20 +121,21 @@
 #auth-qr-form {
   .qr-outer {
     position: relative;
-    height: 280px;
+    aspect-ratio: 1;
+    width: min(100%, 17.5rem, max(9rem, calc(56 * var(--vh, 1vh))));
+    margin-inline: auto;
   }
 
   .qr-inner,
   .qr-loading {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
 
     display: flex;
     justify-content: center;
 
     width: 100%;
-    height: 280px;
+    height: 100%;
   }
 
   .qr-inner {
@@ -176,6 +160,8 @@
     left: 50%;
     transform: translate(-50%, -50%);
 
+    width: 19.3% !important;
+    height: 19.3% !important;
     border-radius: 50%;
 
     background-color: var(--color-telegram-blue);
@@ -183,8 +169,18 @@
 
   .qr-container {
     overflow: hidden;
+
+    width: 100%;
+    height: 100%;
     border-radius: 1.5rem;
+
     background-color: white;
+
+    > svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
   }
 
   h1 {
@@ -194,14 +190,14 @@
 
   ol {
     counter-reset: item;
-    padding: 0 1.75rem;
+    padding-inline: clamp(0.5rem, 5vw, 1.75rem);
     list-style: none;
 
     li {
       counter-increment: item;
       display: flex;
       margin: 0.75rem 0;
-      text-align: left;
+      text-align: start;
 
       &::before {
         content: counter(item);
@@ -212,7 +208,8 @@
 
         min-width: 1.375rem;
         height: 1.375rem;
-        margin: 0.0625rem 0.75rem 0 0;
+        margin-block-start: 0.0625rem;
+        margin-inline-end: 0.75rem;
         padding: 0;
         border-radius: 50%;
 
@@ -223,6 +220,16 @@
       }
     }
   }
+}
+
+.auth-client-note,
+.auth-connection-status {
+  margin: 0 0 0.75rem;
+
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 #sign-in-password {

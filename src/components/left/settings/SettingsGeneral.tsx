@@ -105,7 +105,7 @@ const SettingsGeneral = ({
 
   return (
     <div className="settings-content custom-scroll">
-      <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('Settings')}</IslandTitle>
+      <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('SettingsGroupAppearance')}</IslandTitle>
       <Island>
         <RangeSlider
           label={lang('TextSize')}

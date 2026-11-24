@@ -59,11 +59,7 @@
 
   &-main {
     height: calc(var(--symbol-menu-height) - var(--symbol-menu-footer-height));
-    max-height: calc(100vh - var(--symbol-menu-footer-height));
-
-    @media (max-width: 600px) {
-      max-height: calc(100vh - var(--symbol-menu-footer-height) - env(safe-area-inset-bottom));
-    }
+    min-height: 0;
   }
 
   &-footer {
@@ -96,7 +92,7 @@
 
       &.symbol-delete-button {
         position: absolute;
-        right: 0.25rem;
+        inset-inline-end: 0.25rem;
       }
     }
   }
@@ -171,6 +167,14 @@
     top: max(0.25rem, env(safe-area-inset-top));
     right: max(0.25rem, env(safe-area-inset-right));
     display: none;
+  }
+
+  @media (pointer: coarse) {
+    &-footer .Button,
+    .symbol-close-button.Button {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
   }
 
   @media (orientation: landscape) {
@@ -315,7 +319,7 @@
     margin: 0;
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     gap: 0.5rem;
   }
 }

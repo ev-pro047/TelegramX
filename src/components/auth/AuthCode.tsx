@@ -11,8 +11,8 @@ import { pick } from '../../util/iteratees';
 import useHistoryBack from '../../hooks/useHistoryBack';
 import useLang from '../../hooks/useLang';
 
-import Icon from '../common/icons/Icon';
 import TrackingMonkey from '../common/TrackingMonkey';
+import Button from '../ui/Button';
 import InputText from '../ui/InputText';
 import Loading from '../ui/Loading';
 
@@ -57,7 +57,7 @@ const AuthCode = ({
     }
 
     const { currentTarget: target } = e;
-    target.value = target.value.replace(/[^\d]+/, '').substr(0, CODE_LENGTH);
+    target.value = target.value.replace(/\D/g, '').slice(0, CODE_LENGTH);
 
     if (target.value === code) {
       return;
@@ -97,16 +97,15 @@ const AuthCode = ({
         />
         <h1>
           {phoneNumber}
-          <div
-            className="auth-number-edit div-button"
+          <Button
+            round
+            color="translucent"
+            size="smaller"
+            className="auth-number-edit"
             onClick={handleReturnToAuthPhoneNumber}
-            role="button"
-            tabIndex={0}
-            title={lang('WrongNumber')}
-            aria-label={lang('WrongNumber')}
-          >
-            <Icon name="edit" />
-          </div>
+            ariaLabel={lang('WrongNumber')}
+            iconName="edit"
+          />
         </h1>
         <p className="note">
           {lang(isCodeViaApp ? 'SentAppCode' : 'LoginJustSentSms', undefined, {
@@ -121,7 +120,7 @@ const AuthCode = ({
           onInput={onCodeChange}
           value={code}
           error={errorKey && lang.withRegular(errorKey)}
-          autoComplete="off"
+          autoComplete="one-time-code"
           inputMode="numeric"
         />
         {isLoading && <Loading />}

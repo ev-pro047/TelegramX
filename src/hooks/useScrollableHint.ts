@@ -153,7 +153,7 @@ function measureHorizontalScrollableHint(
     };
   }
 
-  if (scrollLeft < 0) {
+  if (scrollLeft <= 0) {
     const absoluteScrollLeft = Math.abs(scrollLeft);
 
     return {

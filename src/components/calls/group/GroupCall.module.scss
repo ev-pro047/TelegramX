@@ -20,6 +20,7 @@
 
   --default-width: 26.25rem;
   --max-height: 40rem;
+  --call-dialog-height: calc(100 * var(--vh, 1vh));
 
   color: var(--color-text);
 
@@ -29,15 +30,15 @@
 
       max-width: var(--default-width);
       height: 100%;
-      min-height: min(80vh, var(--max-height));
-      max-height: min(var(--max-height), 100vh);
+      min-height: 0;
+      max-height: min(var(--max-height), calc(var(--call-dialog-height) - 2 * var(--modal-block-gap)));
 
       background: var(--group-call-background-color);
     }
 
     .modal-content {
       display: flex;
-      min-height: 100%;
+      min-height: 0;
       padding: 0;
     }
   }
@@ -51,7 +52,7 @@
 .panel {
   position: relative;
 
-  overflow-y: scroll;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 
@@ -193,12 +194,12 @@
 
   position: absolute;
   z-index: 2;
-  bottom: 1.75rem;
+  bottom: max(1.75rem, var(--safe-area-bottom));
   left: 50%;
   transform: translateX(calc(-50% - var(--actions-max-width) / 2));
 
   display: flex;
-  gap: 1.25rem;
+  gap: clamp(0.25rem, 2vw, 1.25rem);
 }
 
 .actionButton {
@@ -238,6 +239,7 @@
     .modal-dialog {
       min-width: 100%;
       min-height: 100%;
+      max-height: none;
       border-radius: 0;
     }
 
@@ -252,6 +254,8 @@
 }
 
 .landscape {
+  --default-width: clamp(15rem, 42vw, 26.25rem);
+
   .panelWrapper {
     position: absolute;
     top: 0;
@@ -276,8 +280,17 @@
       transition: 250ms ease-in-out opacity;
     }
 
-    .videos:hover ~ .actions, .mainVideoContainer:hover ~ .actions, .actions:hover {
+    .videos:hover ~ .actions,
+    .mainVideoContainer:hover ~ .actions,
+    .actions:hover,
+    .actions:focus-within {
       opacity: 1;
+    }
+
+    @media (pointer: coarse) {
+      .actions {
+        opacity: 1;
+      }
     }
   }
 

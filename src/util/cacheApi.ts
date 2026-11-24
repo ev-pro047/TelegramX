@@ -251,7 +251,7 @@ export async function cleanup(cacheNames: string[]) {
 }
 
 export function purgeClearableCache() {
-  CLEARABLE_CACHE_NAMES.forEach((cacheName) => clear(cacheName));
+  return Promise.all(CLEARABLE_CACHE_NAMES.map((cacheName) => clear(cacheName)));
 }
 
 export async function purgePasscodeCaches() {

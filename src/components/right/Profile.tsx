@@ -1445,10 +1445,13 @@ const Profile = ({
           <div
             ref={sharedMediaTabsRef}
             className={buildClassName(styles.sharedMediaTabs, 'shared-media-tabs')}
+            role="group"
+            aria-label={lang('SettingsProfileTabs')}
           >
             <TabList
               activeTab={activeTabIndex}
               tabs={tabs}
+              withScrollHint
               onSwitchTab={handleSwitchTab}
             />
           </div>

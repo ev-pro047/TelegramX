@@ -8,7 +8,7 @@
     flex-direction: column;
     align-items: center;
 
-    height: 80vh;
+    height: calc(80 * var(--vh, 1vh));
     padding: 0;
   }
 
@@ -39,6 +39,7 @@
 .single-column {
   :global(.modal-dialog) {
     max-width: 100% !important;
+    max-height: 100%;
     margin: 0;
     border-radius: 0;
   }
@@ -60,7 +61,10 @@
   align-items: center;
 
   width: 100%;
-  padding: 0.5rem;
+  padding-top: max(0.5rem, var(--safe-area-top));
+  padding-right: max(0.5rem, var(--safe-area-right));
+  padding-bottom: 0.5rem;
+  padding-left: max(0.5rem, var(--safe-area-left));
 
   color: #fff;
 
@@ -150,19 +154,28 @@
   width: 100%;
   margin-top: 0;
   margin-bottom: auto;
-  padding-top: 4rem;
-  padding-bottom: 2rem;
+  padding: clamp(3.25rem, 14vh, 4rem) 1rem 0.5rem;
 
   color: #fff;
+  text-align: center;
+  overflow-wrap: anywhere;
 
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, transparent 100%);
 }
 
 .buttons {
   user-select: none;
-  position: absolute;
-  bottom: 1rem;
+
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem clamp(0.25rem, 2vw, 1rem);
+  justify-content: center;
+
+  width: 100%;
+  padding-top: 0.75rem;
+  padding-right: max(0.5rem, var(--safe-area-right));
+  padding-bottom: max(1rem, var(--safe-area-bottom));
+  padding-left: max(0.5rem, var(--safe-area-left));
 }
 
 .leave {

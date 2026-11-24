@@ -72,6 +72,7 @@ const InputText = ({
 }: OwnProps) => {
   const lang = useLang();
   const labelText = error || success || label;
+  const feedbackId = id && error ? `${id}-feedback` : undefined;
   const fullClassName = buildClassName(
     'input-group',
     value && 'touched',
@@ -106,14 +107,16 @@ const InputText = ({
         onKeyDown={onKeyDown}
         onBlur={onBlur}
         onPaste={onPaste}
-        aria-label={labelText}
+        aria-label={label || labelText}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={feedbackId}
         title={title}
         teactExperimentControlled={teactExperimentControlled}
         onClick={onClick}
         autoFocus={autoFocus}
       />
       {labelText && (
-        <label htmlFor={id}>{labelText}</label>
+        <label htmlFor={id} id={feedbackId}>{labelText}</label>
       )}
       {(maxLengthIndicator || (hasLengthIndicator && maxLength !== undefined)) && (
         <div className="max-length-indicator">

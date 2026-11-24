@@ -1,4 +1,8 @@
+@use "../../styles/mixins";
+
 #MediaViewer {
+  --media-viewport-height: calc(100 * var(--vh, 1vh));
+
   position: fixed;
   z-index: var(--z-media-viewer);
   top: 0;
@@ -14,7 +18,7 @@
 
   width: 100vw;
   max-width: none;
-  height: 100%;
+  height: var(--media-viewport-height);
   max-height: none;
   margin: 0;
   padding: 0;
@@ -92,7 +96,7 @@
       left: 0;
 
       width: 100vw;
-      height: 100vh;
+      height: var(--media-viewport-height);
       padding: 0;
     }
   }
@@ -105,7 +109,10 @@
     grid-area: 1 / 1 / 2 / -2;
 
     min-width: 0;
-    padding: 0.5rem max(1.25rem, env(safe-area-inset-left));
+    padding-top: max(0.5rem, var(--safe-area-top));
+    padding-right: max(1.25rem, var(--safe-area-right));
+    padding-bottom: 0.5rem;
+    padding-left: max(1.25rem, var(--safe-area-left));
 
     background: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0) 100%);
 
@@ -120,8 +127,9 @@
       padding-left: var(--window-controls-width);
     }
 
-    @media (max-width: 600px) {
-      padding: 0.5rem max(0.5rem, env(safe-area-inset-left));
+    @include mixins.single-pane() {
+      padding-right: max(0.5rem, var(--safe-area-right));
+      padding-left: max(0.5rem, var(--safe-area-left));
 
       .media-viewer-close {
         margin-right: 1.5rem;
@@ -175,8 +183,14 @@
     transition: opacity 0.15s;
 
     &:hover,
+    &:focus-visible,
     .is-touch-env & {
       opacity: 1;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: -2px;
     }
 
     &.prev {
@@ -209,7 +223,7 @@
       height: 6rem;
       background-position-y: center;
 
-      @media (max-width: 600px) {
+      @include mixins.single-pane() {
         pointer-events: none;
         opacity: 0;
         transition: opacity 0.15s ease-in;
@@ -221,7 +235,7 @@
       }
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       width: 20vw;
     }
   }
@@ -233,7 +247,7 @@
     -webkit-touch-callout: none;
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     background: rgba(0, 0, 0, 1);
   }
 }

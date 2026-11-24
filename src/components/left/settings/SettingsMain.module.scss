@@ -1,8 +1,13 @@
 @use "../../../styles/mixins";
 
 .root {
-  overflow-y: scroll;
+  scrollbar-gutter: stable;
+
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+
   height: calc(100% - var(--column-header-height));
+
   background-color: var(--color-background-secondary);
 }
 
@@ -11,6 +16,23 @@
   padding: 1rem;
 
   @include mixins.adapt-padding-to-scrollbar(1rem);
+}
+
+.menuSection {
+  :global(.multiline-item) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.clientNote {
+  margin: 1rem 0 0;
+  padding-inline: 0.75rem;
+
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .selfProfile {

@@ -35,13 +35,14 @@ const PhoneCallButton = ({
     <div className={styles.root}>
       <Button
         round
+        ariaLabel={label}
         className={buildClassName(className, styles.button, isActive && styles.active)}
         onClick={onClick}
         disabled={isDisabled}
       >
         {customIcon || <Icon name={icon!} className={iconClassName} />}
       </Button>
-      <div className={styles.buttonText}>{label}</div>
+      <div className={styles.buttonText} aria-hidden="true">{label}</div>
     </div>
   );
 };

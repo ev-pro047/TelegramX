@@ -183,6 +183,7 @@ const FoldersSidebar = ({
           <Folder
             key={tab.id}
             title={tab.title}
+            fullTitle={tab.fullTitle}
             isActive={i === activeChatFolder}
             isBlocked={tab.isBlocked}
             badgeCount={tab.badgeCount}

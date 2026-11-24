@@ -1,6 +1,6 @@
 # Xydrive Beta UI audit
 
-Baseline `bdae90a` in TelegramX. The implementation follows TG-Drive’s browsing, selection, inspector and transfer patterns through TelegramX’s native client.
+Original baseline `bdae90a` in TelegramX. Reviewed again on `021ef924` during the [native client pass](./telegramx-ui-audit.md). The implementation follows TG-Drive’s browsing, selection, inspector and transfer patterns through TelegramX’s native client.
 
 ## Checkpoints
 
@@ -15,7 +15,7 @@ Baseline `bdae90a` in TelegramX. The implementation follows TG-Drive’s browsin
 
 ## Verification limits
 
-- The regression suite runs with a temporary test bootstrap because this checkout ignores the file configured as `tests/init.ts`. The new unit cases are tracked under `src/lib/xydrive/`.
+- The regression suite uses the tracked `src/testSetup.ts` bootstrap. The drive unit cases are under `src/lib/xydrive/`.
 - The simulated workspace covers list/grid switching, tree expansion, scoped search, mixed-selection protection, mounted-file actions, inspector and transfers. This fixture uses synthetic data.
 - Cloud Chrome could not reach the executor’s localhost. The 320, 360, 390, 430, 844×390, 768, 1024, 1280×720, 1366×768, 1440 and 1920 CSS-pixel browser checks remain pending.
 - Telegram login, actual MTProto mutations, forwarding, uploads, downloads and media playback require an authenticated live session. Input fixtures do not exercise those network operations.
@@ -35,12 +35,12 @@ Xydrive shell and Explorer. Compact header, browser/account layout, shared priva
 
 | ID | Audit finding | Disposition | Implementation or limit |
 | --- | --- | --- | --- |
-| 001 | Consolidate excessive topbar, workspace header and explorer toolbar layers. | Implemented | The title and folder actions share a workspace row. The identity bar and search row keep distinct responsibilities. |
+| 001 | Consolidate excessive topbar, workspace header and explorer toolbar layers. | Implemented | The title and folder actions share a workspace row. Account identity and Beta are in the navigation header. |
 | 002 | Make fixed-width desktop sidebar collapsible or resizable. | Implemented | See this section’s changed area. |
 | 003 | Improve surface hierarchy and visual depth. | Implemented | See this section’s changed area. |
 | 004 | Standardize corner radii across cards, controls and dialogs. | Implemented | See this section’s changed area. |
 | 005 | Remove redundant root breadcrumb/title information. | Implemented | See this section’s changed area. |
-| 006 | Add appropriate account/workspace indicator. | Implemented | Signed-in account first name is shown in the wider header. |
+| 006 | Add appropriate account/workspace indicator. | Implemented | The navigation header shows the signed-in account name. |
 | 007 | Consolidate permanent status and transfer bars. | Implemented | Results pagination appears only when needed. Transfers use a small launcher and a dedicated sheet. |
 | 008 | Provide compact/comfortable density options. | Implemented | See this section’s changed area. |
 | 009 | Constrain overly stretched overview layouts on large displays. | Implemented | Overview content is capped at 72rem. |
@@ -64,7 +64,7 @@ Responsive shell, Collection, inspector and transfer sheet. Shared drawer breakp
 | 020 | Retain essential date/size metadata in mobile list mode. | Implemented | See this section’s changed area. |
 | 021 | Use a mobile-optimized details inspector or bottom sheet. | Implemented | See this section’s changed area. |
 | 022 | Prevent expanded transfers from consuming most explorer height. | Implemented | See this section’s changed area. |
-| 023 | Provide easily reachable create/upload action, e.g. mobile FAB. | Implemented | Upload stays in the action row. New folder is available in the action menu and navigation drawer. |
+| 023 | Provide easily reachable create/upload action, e.g. mobile FAB. | Implemented | Upload stays in the action row. New folder is in the workspace toolbar on wide screens and its overflow menu on narrow phones. |
 | 024 | Design for short landscape-phone viewports. | Implemented | See this section’s changed area. |
 | 025 | Align CSS and JS responsive thresholds and interaction modes. | Implemented | The JavaScript drawer and CSS use the same width and landscape media query. |
 
@@ -85,7 +85,7 @@ Collection, thumbnail and file metadata. High-contrast format tags, separate act
 | 034 | Add audio playback affordances and duration when available. | Implemented | See this section’s changed area. |
 | 035 | Add thumbnail skeleton/loading and smooth reveal. | Implemented | See this section’s changed area. |
 | 036 | Handle unavailable/failed thumbnails distinctly and gracefully. | Implemented | Image failures and thumbnail timeouts use the typed file icon. |
-| 037 | Avoid excessive thumbnail cropping; use appropriate fit per media type. | Implemented | See this section’s changed area. |
+| 037 | Avoid excessive thumbnail cropping; use appropriate fit per media type. | Implemented | Media cards keep a consistent frame and fit the full thumbnail within it. |
 | 038 | Keep selected and unselected corner radii consistent. | Implemented | See this section’s changed area. |
 | 039 | Offer compact and large-preview grid densities. | Implemented | Compact and comfortable density change card spacing and control sizing. |
 | 040 | Show per-file preview loading state. | Implemented | See this section’s changed area. |

@@ -843,8 +843,8 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.grid .mediaItem .thumbnailImage {
-  object-fit: cover;
+.grid .mediaItem .thumbnail {
+  background: var(--color-background-secondary);
 }
 
 .list {
