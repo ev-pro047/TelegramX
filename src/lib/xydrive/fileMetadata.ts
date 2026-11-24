@@ -6,6 +6,10 @@ const ARCHIVE_MIME_TYPES = new Set([
   'application/x-rar-compressed', 'application/vnd.rar', 'application/gzip',
   'application/x-gzip', 'application/x-tar', 'application/x-bzip2', 'application/x-xz',
 ]);
+const DOCUMENT_MIME_TYPES = new Set([
+  'application/pdf', 'application/msword', 'application/rtf', 'application/epub+zip',
+  'application/vnd.ms-excel', 'application/vnd.ms-powerpoint',
+]);
 const ARCHIVE_EXTENSION = /\.(zip|7z|rar|tar|gz|bz2|xz|tgz)$/i;
 const IMAGE_EXTENSION = /\.(jpg|jpeg|png|gif|webp|avif|heic|heif|bmp|tiff|svg)$/i;
 const VIDEO_EXTENSION = /\.(mp4|webm|mov|mkv|avi|mpeg|m4v)$/i;
@@ -21,11 +25,14 @@ export function classifyXydriveFile(name: string, mimeType?: string): XydriveCat
   if (mimeType?.startsWith('video/')) return 'videos';
   if (mimeType?.startsWith('audio/')) return 'audio';
   if (mimeType && ARCHIVE_MIME_TYPES.has(mimeType)) return 'archives';
+  if (mimeType && (DOCUMENT_MIME_TYPES.has(mimeType) || mimeType.startsWith('text/')
+    || mimeType.startsWith('application/vnd.openxmlformats-officedocument.')
+    || mimeType.startsWith('application/vnd.oasis.opendocument.'))) return 'documents';
   if (ARCHIVE_EXTENSION.test(name)) return 'archives';
   if (IMAGE_EXTENSION.test(name)) return 'images';
   if (VIDEO_EXTENSION.test(name)) return 'videos';
   if (AUDIO_EXTENSION.test(name)) return 'audio';
-  if (mimeType?.startsWith('text/') || DOCUMENT_EXTENSION.test(name)) return 'documents';
+  if (DOCUMENT_EXTENSION.test(name)) return 'documents';
   return 'other';
 }
 
@@ -43,7 +50,7 @@ export function getXydriveFile(message: ApiMessage, ownerId: string): XydriveFil
   const mediaId = media.id;
   const extension = mediaType === 'photo' ? '.jpg' : mediaType === 'sticker'
     ? (media.isLottie ? '.tgs' : media.isVideo ? '.webm' : '.webp') : '';
-  const name = ('fileName' in media && media.fileName.trim())
+  const name = ('fileName' in media && media.fileName?.trim())
     || `${mediaType}-${message.id}${extension}`;
   const mimeType = 'mimeType' in media ? normalizeMime(media.mimeType)
     : mediaType === 'photo' ? 'image/jpeg' : undefined;

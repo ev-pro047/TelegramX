@@ -42,6 +42,8 @@ describe('Xydrive file metadata', () => {
     expect(classifyXydriveFile('archive.ZIP', 'application/octet-stream')).toBe('archives');
     expect(classifyXydriveFile('binary.bin', 'application/octet-stream')).toBe('other');
     expect(classifyXydriveFile('track', 'audio/mpeg')).toBe('audio');
+    expect(classifyXydriveFile('untitled', 'application/pdf')).toBe('documents');
+    expect(classifyXydriveFile('sheet', 'application/vnd.ms-excel')).toBe('documents');
   });
 
   it('deduplicates repeated pages without collapsing distinct messages', () => {
