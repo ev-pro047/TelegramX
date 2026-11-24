@@ -5,7 +5,6 @@ import type { AccountSettings } from '../../../types';
 
 import { AUTODOWNLOAD_FILESIZE_MB_LIMITS } from '../../../config';
 import { pick } from '../../../util/iteratees';
-import { clearMediaCache } from '../../../util/settingsActions';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
@@ -54,7 +53,7 @@ const SettingsDataStorage = ({
   autoLoadFileMaxSizeMb,
   onReset,
 }: OwnProps & StateProps) => {
-  const { setSettingOption } = getActions();
+  const { setSettingOption, openSettingsConfirmation } = getActions();
 
   const lang = useLang();
 
@@ -64,7 +63,7 @@ const SettingsDataStorage = ({
   });
 
   const handleClearMediaCache = useLastCallback(() => {
-    clearMediaCache();
+    openSettingsConfirmation({ confirmation: 'clearMediaCache' });
   });
 
   const renderFileSizeCallback = useLastCallback((value: number) => {
@@ -160,6 +159,7 @@ const SettingsDataStorage = ({
         canAutoLoadFileInGroups,
         canAutoLoadFileInChannels,
       )}
+      <IslandTitle role="heading" aria-level={2} dir="auto">{lang('SettingsLocalStorage')}</IslandTitle>
       <Island>
         <ListItem
           onClick={handleClearMediaCache}

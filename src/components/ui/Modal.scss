@@ -1,5 +1,7 @@
 @layer ui.modal {
   .Modal {
+    --modal-block-gap: min(2rem, 4vh);
+
     position: relative;
     z-index: var(--z-modal);
     color: var(--color-text);
@@ -57,12 +59,13 @@
       position: fixed;
       top: 0;
       right: 0;
-      bottom: 0;
       left: 0;
 
       display: flex;
       align-items: center;
       justify-content: center;
+
+      height: calc(100 * var(--vh, 1vh));
     }
 
     &.with-balance-bar {
@@ -99,9 +102,10 @@
       flex-direction: column;
 
       width: 100%;
-      min-width: 17.5rem;
+      min-width: 0;
       max-width: 35rem;
-      margin: 2rem auto;
+      max-height: calc(100 * var(--vh, 1vh) - 2 * var(--modal-block-gap));
+      margin: var(--modal-block-gap) auto;
       border-radius: var(--border-radius-modal);
 
       background-color: var(--color-background);
@@ -119,7 +123,7 @@
       }
 
       @media (max-width: 450px) {
-        max-width: calc(100vw - 3rem) !important;
+        max-width: calc(100% - 2 * clamp(0.75rem, 4vw, 1.5rem)) !important;
       }
 
       @media (max-width: 450px) {
@@ -136,6 +140,7 @@
           width: 100% !important;
           max-width: 100% !important;
           height: 100%;
+          max-height: none;
           margin: 0;
           border-radius: 0;
         }
@@ -193,9 +198,11 @@
 
     .modal-content {
       overflow-y: auto;
+      overscroll-behavior-y: contain;
       flex-grow: 1;
 
       width: 100%;
+      min-height: 0;
       max-height: min(92vh, 50rem);
       padding: 1rem 1.5rem 1.1875rem;
 

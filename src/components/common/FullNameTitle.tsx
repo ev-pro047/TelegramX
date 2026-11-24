@@ -142,13 +142,18 @@ const FullNameTitle = ({
       )}
       <h3
         dir="auto"
-        role="button"
+        role={canCopyTitle && title ? 'button' : undefined}
+        tabIndex={canCopyTitle && title ? 0 : undefined}
+        title={typeof specialTitle === 'string' ? specialTitle : title}
         className={buildClassName(
           'fullName',
           styles.fullName,
           canCopyTitle && styles.canCopy,
         )}
-        onClick={handleTitleClick}
+        onClick={canCopyTitle ? handleTitleClick : undefined}
+        onKeyDown={canCopyTitle ? (event) => {
+          if (event.key === 'Enter' || event.key === ' ') handleTitleClick(event);
+        } : undefined}
       >
         {isScrolling ? <Marquee paused={isScrollingPaused}>{renderedTitle}</Marquee> : renderedTitle}
       </h3>

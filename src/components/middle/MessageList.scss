@@ -1,3 +1,5 @@
+@use "../../styles/mixins";
+
 @property --message-list-mask-panes-height {
   inherits: false;
   initial-value: 0px;
@@ -97,7 +99,7 @@
       transition: none !important;
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       bottom: calc(0px - env(safe-area-inset-bottom));
     }
   }
@@ -189,7 +191,7 @@
       }
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       width: 100vw;
       // Patch for an issue on Android when rotating device
       margin: 0;
@@ -413,7 +415,7 @@
       pointer-events: auto;
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       margin-top: 0.5rem;
       margin-bottom: 0.75rem;
     }
@@ -546,7 +548,7 @@
     .topic-group-before-date {
       --topic-next-gap: calc(var(--sticky-date-height) + 2rem); // The date with its margins
 
-      @media (max-width: 600px) {
+      @include mixins.single-pane() {
         --topic-next-gap: calc(var(--sticky-date-height) + 1.25rem);
       }
     }
@@ -639,13 +641,13 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     &.with-bottom-shift {
       margin-bottom: 0;
     }
   }
 
-  @media (min-width: 1276px) {
+  @media (width > 1275px) {
     transform: translate3d(0, 0, 0);
     width: 100%;
     transition:
@@ -677,7 +679,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     transition:
       transform var(--layer-transition),
       --message-list-mask-panes-height var(--middle-header-panes-transition, 0s),

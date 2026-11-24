@@ -24,7 +24,7 @@ import useLang from '../../../hooks/useLang';
 
 import ChatExtra from '../../common/profile/ChatExtra';
 import ProfileInfo from '../../common/profile/ProfileInfo';
-import Island from '../../gili/layout/Island';
+import Island, { IslandTitle } from '../../gili/layout/Island';
 import ListItem from '../../ui/ListItem';
 
 import styles from './SettingsMain.module.scss';
@@ -133,6 +133,7 @@ const SettingsMain = ({
           </Island>
         )}
 
+        <IslandTitle role="heading" aria-level={2} dir="auto">{lang('SettingsGroupAccountSecurity')}</IslandTitle>
         <Island>
           <ListItem
             icon="account-filled"
@@ -145,6 +146,34 @@ const SettingsMain = ({
             <span className="subtitle">{lang('SettingsAccountDesc')}</span>
           </ListItem>
 
+          <ListItem
+            icon="lock-filled"
+            iconBg="gray"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Privacy })}
+          >
+            <span className="title">{lang('PrivacySettings')}</span>
+            <span className="subtitle">{lang('SettingsPrivacyDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="devices-filled"
+            iconBg="blue"
+            multiline
+            narrow
+            rightElement={sessionCount > 0
+              ? <span className="settings-item__current-value">{sessionCount}</span>
+              : undefined}
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.ActiveSessions })}
+          >
+            <span className="title">{lang('SessionsTitle')}</span>
+            <span className="subtitle">{lang('SettingsSessionsDesc')}</span>
+          </ListItem>
+        </Island>
+
+        <IslandTitle role="heading" aria-level={2} dir="auto">{lang('SettingsGroupPreferences')}</IslandTitle>
+        <Island>
           <ListItem
             icon="settings-filled"
             iconBg="orange"
@@ -165,50 +194,6 @@ const SettingsMain = ({
           >
             <span className="title">{lang('Notifications')}</span>
             <span className="subtitle">{lang('SettingsNotificationsDesc')}</span>
-          </ListItem>
-
-          <ListItem
-            icon="lock-filled"
-            iconBg="gray"
-            multiline
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.Privacy })}
-          >
-            <span className="title">{lang('PrivacySettings')}</span>
-            <span className="subtitle">{lang('SettingsPrivacyDesc')}</span>
-          </ListItem>
-
-          <ListItem
-            icon="piechart-filled"
-            iconBg="green"
-            multiline
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.DataStorage })}
-          >
-            <span className="title">{lang('DataSettings')}</span>
-            <span className="subtitle">{lang('SettingsDataDesc')}</span>
-          </ListItem>
-
-          <ListItem
-            icon="folder-filled"
-            iconBg="blue"
-            multiline
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.Folders })}
-          >
-            <span className="title">{lang('Filters')}</span>
-            <span className="subtitle">{lang('SettingsFoldersDesc')}</span>
-          </ListItem>
-
-          <ListItem
-            icon="animations-filled"
-            iconBg="purple"
-            multiline
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.Performance })}
-          >
-            <span className="title">{lang('MenuAnimations')}</span>
-            <span className="subtitle">{lang('SettingsPerformanceDesc')}</span>
           </ListItem>
 
           <ListItem
@@ -247,20 +232,45 @@ const SettingsMain = ({
               <span className="subtitle">{lang('KeyboardShortcutsDesc')}</span>
             </ListItem>
           )}
+        </Island>
+
+        <IslandTitle role="heading" aria-level={2} dir="auto">{lang('SettingsGroupStorageOrganization')}</IslandTitle>
+        <Island>
+          <ListItem
+            icon="piechart-filled"
+            iconBg="green"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.DataStorage })}
+          >
+            <span className="title">{lang('DataSettings')}</span>
+            <span className="subtitle">{lang('SettingsDataDesc')}</span>
+          </ListItem>
 
           <ListItem
-            icon="devices-filled"
+            icon="folder-filled"
             iconBg="blue"
             multiline
             narrow
-            rightElement={sessionCount > 0
-              ? <span className="settings-item__current-value">{sessionCount}</span>
-              : undefined}
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.ActiveSessions })}
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Folders })}
           >
-            <span className="title">{lang('SessionsTitle')}</span>
-            <span className="subtitle">{lang('SettingsSessionsDesc')}</span>
+            <span className="title">{lang('Filters')}</span>
+            <span className="subtitle">{lang('SettingsFoldersDesc')}</span>
           </ListItem>
+
+          <ListItem
+            icon="animations-filled"
+            iconBg="purple"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Performance })}
+          >
+            <span className="title">{lang('MenuAnimations')}</span>
+            <span className="subtitle">{lang('SettingsPerformanceDesc')}</span>
+          </ListItem>
+        </Island>
+
+        <Island>
           <ListItem
             icon="bug"
             iconBg="gray"
@@ -330,6 +340,7 @@ const SettingsMain = ({
           )}
         </Island>
 
+        <IslandTitle role="heading" aria-level={2} dir="auto">{lang('ButtonHelp')}</IslandTitle>
         <Island>
           <ListItem
             icon="support-filled"
@@ -356,6 +367,7 @@ const SettingsMain = ({
             {lang('MenuPrivacyPolicy')}
           </ListItem>
         </Island>
+        <p className={styles.clientNote} dir="auto">{lang('TelegramXClientIdentity')}</p>
       </div>
     </div>
   );

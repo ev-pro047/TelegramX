@@ -44,7 +44,7 @@ function handleMediaQueryChange() {
 
 function initMediaQueryCache() {
   const mobileQuery = window.matchMedia(`(max-width: ${MOBILE_SCREEN_MAX_WIDTH}px), \
-  (max-width: ${MOBILE_SCREEN_LANDSCAPE_MAX_WIDTH}px and max-height: ${MOBILE_SCREEN_LANDSCAPE_MAX_HEIGHT}px)`);
+  (max-width: ${MOBILE_SCREEN_LANDSCAPE_MAX_WIDTH}px) and (max-height: ${MOBILE_SCREEN_LANDSCAPE_MAX_HEIGHT}px)`);
   mediaQueryCache.set('mobile', mobileQuery);
   mobileQuery.addEventListener('change', handleMediaQueryChange);
 

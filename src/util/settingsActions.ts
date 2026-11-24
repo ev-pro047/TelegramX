@@ -74,9 +74,6 @@ export function runSettingsAction(action: SettingsAction, tabId = getCurrentTabI
     case 'resetWallpaper':
       resetWallpaper();
       break;
-    case 'clearMediaCache':
-      clearMediaCache(tabId);
-      break;
     case 'openPasskeys':
       if (getGlobal().settings.passkeys) {
         openPasskeys(tabId);
@@ -114,13 +111,16 @@ export function resetWallpaper() {
   getActions().setThemeSettings({ theme, ...buildDefaultWallpaperSettings(theme) });
 }
 
-export function clearMediaCache(tabId?: number) {
-  purgeClearableCache();
+export async function clearMediaCache(tabId?: number) {
+  const results = await purgeClearableCache();
   // Widgets' storage goes with the cache, as the widget spec asks and tdesktop does
   clearWidgetStorage();
   getActions().clearMessageWidgetStorage();
   getActions().showNotification({
-    message: { key: 'SettingsDataClearMediaDone' },
+    message: {
+      key: results.every((result) => result !== undefined)
+        ? 'SettingsDataClearMediaDone' : 'SettingsDataClearMediaError',
+    },
     tabId,
   });
 }

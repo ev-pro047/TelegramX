@@ -59,12 +59,12 @@
       --custom-emoji-size: 1rem;
 
       &-test {
-        position: absolute;
-        z-index: 1;
-        bottom: 0.0625rem;
-        left: 2.875rem;
+        flex-shrink: 0;
 
-        font-size: 0.5rem;
+        margin-inline-start: auto;
+        padding-inline-start: 0.5rem;
+
+        font-size: 0.75rem;
         font-weight: var(--font-weight-medium);
         color: var(--color-text-secondary);
       }

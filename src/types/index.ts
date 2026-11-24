@@ -222,10 +222,11 @@ export type SettingsHighlight = {
   langKey: RegularLangKey;
 };
 
-export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
+export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'clearMediaCache'
+  | 'terminateAllSessions' | 'terminateAllWebSessions';
 
 export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openStars' | 'openTon' | 'sendGift' | 'openFaq'
-  | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
+  | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'openPasskeys' | 'setBirthday'
   | 'setAccountTtl' | 'openWallet';
 
 export enum SettingsScreens {

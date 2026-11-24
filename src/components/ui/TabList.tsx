@@ -15,6 +15,7 @@ import useFlag from '../../hooks/useFlag';
 import useHorizontalScroll from '../../hooks/useHorizontalScroll';
 import useLastCallback from '../../hooks/useLastCallback';
 import useResizeObserver from '../../hooks/useResizeObserver';
+import useScrollableHint from '../../hooks/useScrollableHint';
 import useScrollToActiveTab from '../../hooks/useScrollToActiveTab';
 
 import CustomEmoji from '../common/CustomEmoji';
@@ -30,6 +31,7 @@ const EMOJI_SIZE = 20;
 type OwnProps = {
   tabs: readonly TabWithProperties[];
   activeTab: number;
+  withScrollHint?: boolean;
   className?: string;
   tabClassName?: string;
   indicatorClassName?: string;
@@ -46,6 +48,7 @@ type OwnProps = {
 const TabList = ({
   tabs,
   activeTab,
+  withScrollHint,
   className,
   tabClassName,
   indicatorClassName,
@@ -92,6 +95,12 @@ const TabList = ({
 
   useScrollToActiveTab(containerRef, activeTab);
 
+  const { updateScrollableHint } = useScrollableHint(containerRef, { isDisabled: !withScrollHint });
+
+  useEffect(() => {
+    if (withScrollHint) updateScrollableHint();
+  }, [tabs, withScrollHint, updateScrollableHint]);
+
   const handleTabClick = useLastCallback((index: number) => {
     onSwitchTab(index);
   });
@@ -130,7 +139,7 @@ const TabList = ({
 
   const hasContextActions = tabs.some((tab) => tab.contextActions?.length);
 
-  const renderTab = (tab: TabWithProperties, index: number) => {
+  const renderTab = (tab: TabWithProperties, index: number, isIndicator?: boolean) => {
     const customEmojiId = tab.customEmojiDocumentId
       || (typeof tab.emoticon === 'object' ? tab.emoticon.documentId : undefined);
     const stringEmoticon = typeof tab.emoticon === 'string' ? tab.emoticon : undefined;
@@ -144,7 +153,16 @@ const TabList = ({
           itemAlignment === 'vertical' && styles.vertical,
           stretched && styles.stretched,
         )}
+        role={isIndicator ? undefined : 'button'}
+        tabIndex={isIndicator ? undefined : 0}
+        aria-pressed={isIndicator ? undefined : index === activeTab}
+        title={isIndicator ? undefined : tab.fullTitle}
         onClick={() => handleTabClick(index)}
+        onKeyDown={isIndicator ? undefined : (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          handleTabClick(index);
+        }}
         data-file-hover-open={onFileHoverOpen ? true : undefined}
         onFileHoverOpen={onFileHoverOpen ? (e) => handleFileHoverOpen(index, e) : undefined}
         onContextMenu={hasContextActions ? (e) => handleContextMenu(index, e) : undefined}
@@ -173,6 +191,7 @@ const TabList = ({
       ref={containerRef}
       className={buildClassName(
         'TabList',
+        withScrollHint && 'custom-scroll-x',
         styles.container,
         withFadeMask && styles.withFadeMask,
         centered && styles.centered,
@@ -181,7 +200,7 @@ const TabList = ({
         clipPath && styles.ready,
       )}
     >
-      {tabs.map(renderTab)}
+      {tabs.map((tab, index) => renderTab(tab, index))}
 
       <div
         ref={clipPathContainerRef}
@@ -192,7 +211,7 @@ const TabList = ({
         style={clipPath ? `clip-path: ${clipPath}` : undefined}
         aria-hidden
       >
-        {tabs.map(renderTab)}
+        {tabs.map((tab, index) => renderTab(tab, index, true))}
       </div>
     </div>
   );

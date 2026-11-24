@@ -7,6 +7,7 @@ import type { SettingsConfirmation } from '../../../types';
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import AskQuestionDialog from './AskQuestionDialog';
+import ClearMediaCacheDialog from './ClearMediaCacheDialog';
 import SignOutDialog from './SignOutDialog';
 import TerminateAllSessionsDialog from './TerminateAllSessionsDialog';
 import TerminateAllWebSessionsDialog from './TerminateAllWebSessionsDialog';
@@ -18,6 +19,7 @@ export type OwnProps = {
 
 const DIALOGS = {
   askQuestion: AskQuestionDialog,
+  clearMediaCache: ClearMediaCacheDialog,
   logOut: SignOutDialog,
   terminateAllSessions: TerminateAllSessionsDialog,
   terminateAllWebSessions: TerminateAllWebSessionsDialog,

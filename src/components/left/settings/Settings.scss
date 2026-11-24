@@ -21,7 +21,7 @@
   .chat-list {
     padding-bottom: 0;
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       padding-block: 0;
     }
   }
@@ -87,9 +87,13 @@
 }
 
 .settings-content {
-  overflow-y: scroll;
+  scrollbar-gutter: stable;
+
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 
   height: calc(100% - var(--column-header-height));
+  min-height: 0;
   padding: 1rem;
   padding-top: 0;
 
@@ -225,8 +229,9 @@
     margin-inline: 1rem;
 
     font-size: 0.875rem;
-    line-height: 1.3125;
+    line-height: 1.4;
     color: var(--color-text-secondary);
+    overflow-wrap: anywhere;
 
     .settings-content.two-fa &,
     .settings-content.password-form &,

@@ -65,6 +65,7 @@
 
 .sharedMediaTabs {
   --fade-mask-color: var(--color-background-secondary);
+  --scrollable-hint-size: 0.75rem;
 
   position: sticky;
   z-index: 2;

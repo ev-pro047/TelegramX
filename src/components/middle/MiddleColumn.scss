@@ -1,3 +1,5 @@
+@use "../../styles/mixins";
+
 #MiddleColumn {
   --app-slide-transition: var(--slide-transition);
 
@@ -200,6 +202,7 @@
 
     width: 100%;
     max-width: var(--messages-container-width);
+    height: auto;
     height: calc-size(auto, size);
     margin: 0 auto;
     padding: 0 var(--footer-side-inset);
@@ -218,7 +221,7 @@
     &:not(.no-composer) {
       padding-bottom: 0;
 
-      @media (max-width: 600px) {
+      @include mixins.single-pane() {
         padding-bottom: env(safe-area-inset-bottom);
 
         body.keyboard-visible & {
@@ -227,7 +230,7 @@
       }
     }
 
-    @media (min-width: 1276px) {
+    @media (width > 1275px) {
       width: calc(100% - var(--right-column-width));
 
       #Main.right-column-open & {
@@ -235,7 +238,7 @@
       }
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       --footer-side-inset: 0.5rem;
 
       body.has-symbol-menu-shift & {
@@ -244,7 +247,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     overflow: hidden;
   }
 }
@@ -254,7 +257,7 @@
 .messaging-disabled {
   margin-bottom: var(--composer-bottom-gap);
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     margin-bottom: var(--composer-bottom-gap-mobile);
   }
 }

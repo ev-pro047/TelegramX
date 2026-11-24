@@ -5,11 +5,14 @@
   justify-content: center;
 
   width: 100%;
-  height: 80%;
+  min-height: min(80%, 24rem);
+  padding: 1.5rem 1rem 3.5rem;
+
+  text-align: center;
 
   .sticker {
     height: 6rem;
-    margin-bottom: 1.875rem;
+    margin-bottom: 1.25rem;
   }
 
   .title {
@@ -22,7 +25,8 @@
   }
 
   .description {
-    font-size: 0.875rem;
+    max-width: 28ch;
+    font-size: 0.9375rem;
     color: var(--color-text-secondary);
 
     body.is-ios &,
@@ -51,10 +55,6 @@
       margin-inline-end: 0.625rem;
       font-size: 1.5rem;
     }
-  }
-
-  @media (max-height: 480px) {
-    height: 100%;
   }
 }
 

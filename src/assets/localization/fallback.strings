@@ -3207,8 +3207,11 @@
 "AriaShowSummary" = "Show AI Summary";
 "AriaHideSummary" = "Hide AI Summary";
 "SettingsDataClearMediaCache" = "Clear Media Cache";
-"SettingsDataClearMediaCacheDescription" = "Deletes locally cached media for this account";
+"SettingsDataClearMediaCacheDescription" = "Removes media and widget data stored locally for this account.";
 "SettingsDataClearMediaDone" = "Media cache cleared";
+"SettingsDataClearMediaError" = "The browser could not clear all cached media.";
+"SettingsDataClearCacheConfirmation" = "Clear cached media and widget data for this account on this device?";
+"SettingsLocalStorage" = "Storage on this device";
 "LeaveGroupTitle" = "Leave {group}?";
 "LeaveGroupDescription" = "If you leave, **{nextOwner}** will become the new owner of **{group}** in 1 week.";
 "LeaveBasicGroupDescription" = "If you leave, **{nextOwner}** will immediately become the new owner of **{group}**.";
@@ -4987,3 +4990,10 @@
 "XydriveKeyboardSelect" = "Space selects an item. Shift-click selects a range. Ctrl or Command+A selects all loaded matches.";
 "XydriveKeyboardSearch" = "Ctrl or Command+Shift+F focuses drive search. Change this shortcut in Telegram settings.";
 "XydriveTouchSelect" = "Touch and hold an item to select it. Tap more items to add them to the selection.";
+
+"SettingsGroupAccountSecurity" = "Account and security";
+"SettingsGroupPreferences" = "Preferences";
+"SettingsGroupStorageOrganization" = "Organization and storage";
+"SettingsGroupAppearance" = "Appearance";
+"SettingsProfileTabs" = "Profile content";
+"TelegramXClientIdentity" = "TelegramX is an unofficial Telegram client.";

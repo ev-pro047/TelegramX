@@ -1,5 +1,6 @@
 @use "sass:map";
 @use "../../../styles/icons";
+@use "../../../styles/mixins";
 @use "../../common/code/codeHighlight";
 
 @mixin subheader-styles() {
@@ -17,7 +18,7 @@
   background-color: var(--message-service-background);
   box-shadow: 0 1px 2px var(--color-default-shadow);
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     max-width: calc(90vw - 13rem);
   }
 }
@@ -574,7 +575,7 @@
       margin-top: 1rem;
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       min-width: 17rem;
     }
   }
@@ -652,7 +653,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     max-width: min(29rem, calc(100vw - 6.25rem));
     .MessageList.no-avatars & {
       max-width: min(29rem, calc(100vw - 3.75rem));
@@ -842,7 +843,7 @@
     }
 
     .EmbeddedMessage {
-      @media (max-width: 600px) {
+      @include mixins.single-pane() {
         max-width: calc(90vw - 13rem);
       }
 

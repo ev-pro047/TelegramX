@@ -40,11 +40,15 @@
     --emoji-size: 0.75rem;
     --custom-emoji-size: 0.75rem;
 
-    font-size: 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1.15;
   }
 
   .title {
     overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 
     font-weight: var(--font-weight-medium);
     color: white;

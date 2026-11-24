@@ -1,3 +1,5 @@
+@use "../../styles/mixins";
+
 .root {
   --panes-top-base: calc(var(--middle-header-height) + var(--middle-panel-inline-padding) + var(--middle-header-gap));
   --island-transform-transition: transform var(--layer-transition);
@@ -44,14 +46,14 @@
     opacity: 0;
   }
 
-  @media (min-width: 1276px) {
+  @media (width > 1275px) {
     width: calc(100% - var(--right-column-width) - var(--middle-panel-inline-padding) * 2);
     :global(#Main.right-column-open) & {
       transform: translate3d(calc(var(--right-column-width) / -2), 0, 0);
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     --safe-insets: calc(env(safe-area-inset-left) + env(safe-area-inset-right));
 
     right: env(safe-area-inset-right);

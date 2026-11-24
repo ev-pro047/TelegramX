@@ -225,16 +225,32 @@ const VideoPlayerControls = ({
           </div>
         )}
         <div className="spacer" />
-        <Button
-          ariaLabel={lang('PlayerPlaybackRate')}
-          size="tiny"
-          color="translucent-white"
-          className="playback-rate"
-          round
-          onClick={openPlaybackMenu}
-        >
-          {`${playbackRate}x`}
-        </Button>
+        <div className="playback-rate-anchor">
+          <Button
+            ariaLabel={lang('PlayerPlaybackRate')}
+            size="tiny"
+            color="translucent-white"
+            className="playback-rate"
+            round
+            onClick={openPlaybackMenu}
+          >
+            {`${playbackRate}x`}
+          </Button>
+          <Menu
+            isOpen={isPlaybackMenuOpen}
+            className="playback-rate-menu"
+            positionX="right"
+            positionY="bottom"
+            autoClose
+            onClose={closePlaybackMenu}
+          >
+            {PLAYBACK_RATES.map((rate) => (
+              <MenuItem key={rate} disabled={playbackRate === rate} onClick={() => onPlaybackRateChange(rate)}>
+                {`${rate}x`}
+              </MenuItem>
+            ))}
+          </Menu>
+        </div>
         {isPictureInPictureSupported && (
           <Button
             ariaLabel={lang('VideoPlayerPictureInPicture')}
@@ -258,25 +274,6 @@ const VideoPlayerControls = ({
           />
         )}
       </div>
-      <Menu
-        isOpen={isPlaybackMenuOpen}
-        className={buildClassName(
-          'playback-rate-menu',
-          !isFullscreenSupported && 'no-fullscreen',
-          !isPictureInPictureSupported && 'no-pip',
-        )}
-        positionX="right"
-        positionY="bottom"
-        autoClose
-        onClose={closePlaybackMenu}
-      >
-        {PLAYBACK_RATES.map((rate) => (
-
-          <MenuItem disabled={playbackRate === rate} onClick={() => onPlaybackRateChange(rate)}>
-            {`${rate}x`}
-          </MenuItem>
-        ))}
-      </Menu>
     </div>
   );
 };
@@ -284,7 +281,9 @@ const VideoPlayerControls = ({
 function renderTime(currentTime: number, duration: number) {
   return (
     <div className="player-time">
-      {`${formatMediaDuration(currentTime)} / ${formatMediaDuration(duration)}`}
+      <span>{formatMediaDuration(currentTime)}</span>
+      {' / '}
+      <span>{formatMediaDuration(duration)}</span>
     </div>
   );
 }

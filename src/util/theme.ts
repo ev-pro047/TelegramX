@@ -2,7 +2,7 @@ import type { ApiPeerColors, ApiThemeSettings } from '../api/types';
 import type { IThemeSettings, ThemeKey } from '../types';
 
 import { PEER_COLOR_BG_ACTIVE_OPACITY, PEER_COLOR_BG_OPACITY, PEER_COLOR_GRADIENT_STEP } from '../config';
-import { buildColor, convertColor, mixColors } from '../lib/color';
+import { buildColor, convertColor, getLuminance, mixColors } from '../lib/color';
 import themeColors from '../styles/themes.json';
 import { buildColorFromHex, buildHexFromColor, deriveOutgoingBubbleFill } from './colors';
 import { fastRaf } from './schedulers';
@@ -19,6 +19,7 @@ const TEXT_SELECTION_EMOJI_ALPHA = 'b3';
 const PRIMARY_SHADE_WEIGHT = 0.08;
 const PRIMARY_DARKER_SHADE_WEIGHT = 0.16;
 const PRIMARY_GREYED_WEIGHT = 0.2;
+const SELECTED_CHAT_MAX_LUMINANCE = 0.16;
 const LIGHT_BRIGHTNESS_THRESHOLD = 0.705;
 const NIGHT_BRIGHTNESS_THRESHOLD = 0.735;
 const TINTED_BRIGHTNESS_THRESHOLD = 0.7;
@@ -187,6 +188,7 @@ export function buildThemePalette(theme: ThemeKey, settings?: ApiThemeSettings):
     '--color-text-selection': `${accent}${TEXT_SELECTION_ALPHA}`,
     '--color-selection-highlight-emoji': `${accent}${TEXT_SELECTION_ALPHA}`,
     '--color-chat-active': chatActive,
+    '--color-chat-active-contrast': buildSelectedChatColor(chatActive),
     '--color-chat-active-greyed': greyed,
     '--color-links': accent,
     '--color-active': accent,
@@ -304,6 +306,16 @@ function buildBubblePalette(
     fileDescription: secondary,
     selected: mixHexColors(fill, BLACK, MESSAGE_SELECTION_OPACITY),
   };
+}
+
+function buildSelectedChatColor(accent: string) {
+  const accentColor = buildColorFromHex(accent);
+  const luminance = getLuminance(accentColor);
+  if (luminance <= SELECTED_CHAT_MAX_LUMINANCE) return accent;
+
+  // In linear sRGB the mix scales luminance so the selected chat keeps its accent hue
+  const blackWeight = 1 - SELECTED_CHAT_MAX_LUMINANCE / luminance;
+  return buildHexFromColor(mixColors(accentColor, buildColorFromHex(BLACK), blackWeight, { space: 'srgb-linear' }));
 }
 
 function buildThemeAccent(settings: ApiThemeSettings) {

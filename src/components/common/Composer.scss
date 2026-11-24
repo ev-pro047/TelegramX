@@ -13,12 +13,12 @@
     &::before {
       right: 2.125rem;
 
-      @media (max-width: 600px) {
+      @include mixins.single-pane() {
         right: 1rem;
       }
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       bottom: env(safe-area-inset-bottom);
       padding-right: 1rem;
     }
@@ -75,7 +75,7 @@
 
     width: var(--base-height);
     height: var(--base-height);
-    margin-left: 0.5rem;
+    margin-inline-start: 0.5rem;
 
     box-shadow: var(--shadow-footer);
 
@@ -356,7 +356,7 @@
       z-index: 2;
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       --rich-input-footer-offset: calc(0.5rem + var(--composer-bottom-gap-mobile));
 
       .message-input-wrapper {
@@ -365,7 +365,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     max-width: calc(100% - 3.375rem);
   }
 }
@@ -765,7 +765,7 @@
       font-size: 1.5rem;
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       gap: 0;
       justify-content: space-around;
       padding-inline: 0;
@@ -933,7 +933,7 @@
     transition: none !important;
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     max-height: 10rem;
   }
 }

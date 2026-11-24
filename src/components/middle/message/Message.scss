@@ -1,3 +1,4 @@
+@use "../../../styles/mixins";
 @use "message-content";
 
 // General styles
@@ -144,7 +145,7 @@
   &.last-in-group {
     margin-bottom: 0.625rem;
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       margin-bottom: 0.4375rem;
     }
   }
@@ -214,7 +215,7 @@
       }
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       padding-left: 2.875rem;
 
       .no-avatars &,
@@ -276,11 +277,7 @@
       }
     }
 
-    @media (min-width: 1921px) {
-      --max-width: 30vw;
-    }
-
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       padding-right: 0.25rem;
     }
   }
@@ -841,11 +838,7 @@
     min-width: 17rem;
   }
 
-  @media (min-width: 1921px) {
-    --max-width: calc(30vw - 1rem);
-  }
-
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     margin-bottom: 0.25rem;
   }
 }

@@ -89,7 +89,7 @@ const useFolderTabs = (params: Params) => {
           return allChatsFolder;
         }
 
-        return chatFoldersById[id] || {};
+        return chatFoldersById[id];
       }).filter(Boolean)
       : undefined;
   }, [chatFoldersById, allChatsFolder, orderedFolderIds]);
@@ -213,7 +213,7 @@ const useFolderTabs = (params: Params) => {
       let folderIcon: string | ApiMessageEntityCustomEmoji | undefined = folder.emoticon;
 
       if (sidebarMode) {
-        folderNameOptions.emojiSize = 10;
+        folderNameOptions.emojiSize = 12;
         const currentCustomEmoji = title.entities?.find(
           (entity): entity is ApiMessageEntityCustomEmoji =>
             entity.type === ApiMessageEntityTypes.CustomEmoji && entity.offset === 0);
@@ -234,6 +234,7 @@ const useFolderTabs = (params: Params) => {
       return {
         id,
         title: folderName,
+        fullTitle: title.text,
         badgeCount: folderCountersById[id]?.chatsCount,
         isBadgeActive: Boolean(folderCountersById[id]?.notificationsCount),
         isBlocked,

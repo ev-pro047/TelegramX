@@ -75,4 +75,11 @@
       right: 0.625rem;
     }
   }
+
+  @media (pointer: coarse) {
+    .embedded-cancel {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
+  }
 }

@@ -112,7 +112,7 @@
       background-color: var(--background-color);
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       &::before {
         left: 0;
       }
@@ -268,7 +268,10 @@
     .typing-status {
       unicode-bidi: plaintext;
       flex-grow: 1;
-      padding-right: 0.25rem;
+
+      min-width: 0;
+      padding-inline-end: 0.25rem;
+
       color: var(--color-text-secondary);
 
       &[dir="ltr"] {
@@ -276,7 +279,13 @@
       }
 
       .sender-name {
+        overflow: hidden;
+
+        max-width: 42%;
+
         color: var(--color-chat-username);
+        text-overflow: ellipsis;
+        white-space: nowrap;
 
         body.is-macos &,
         body.is-ios & {
@@ -395,7 +404,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     &.selected {
       --background-color: var(--color-chat-hover) !important;
 
@@ -409,9 +418,10 @@
     }
   }
 
-  @media (min-width: 600px) {
+  @media (width > 950px), (width > 600px) and (height > 450px) {
     &.selected:not(.forum),
     &.selected:not(.forum):hover {
+      --color-chat-active: var(--color-chat-active-contrast);
       --background-color: var(--color-chat-active) !important;
 
       .title .custom-emoji {
@@ -470,7 +480,7 @@
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     .ListItem-button {
       border-radius: 0 !important;
     }

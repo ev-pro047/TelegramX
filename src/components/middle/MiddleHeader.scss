@@ -52,7 +52,8 @@
 
   .back-button {
     position: relative;
-    margin-right: 0.5rem;
+    flex-shrink: 0;
+    margin-inline-end: 0.5rem;
 
     .unread-count {
       pointer-events: none;
@@ -79,7 +80,7 @@
       }
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       margin-left: 0;
     }
   }
@@ -97,7 +98,7 @@
     align-items: center;
     justify-content: flex-end;
 
-    margin-left: auto;
+    margin-inline-start: auto;
     border-radius: 2rem;
 
     background-color: var(--color-background);
@@ -140,7 +141,7 @@
       font-weight: var(--font-weight-semibold);
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       overflow: hidden;
       display: block;
       text-overflow: ellipsis;
@@ -203,16 +204,17 @@
       height: 1.125rem;
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       user-select: none;
     }
   }
 
   .ChatInfo .Avatar {
+    flex-shrink: 0;
     // TODO For some reason `Audio.scss` is imported a second time when loading calls bundle
     width: 2.5rem !important;
     height: 2.5rem !important;
-    margin-right: 0.625rem;
+    margin-inline-end: 0.625rem;
   }
 
   .topic-header-icon {
@@ -276,13 +278,13 @@
     align-items: center;
     justify-content: flex-end;
 
-    margin-left: auto;
+    margin-inline-start: auto;
 
     .Button {
-      margin-left: 0.25rem;
+      margin-inline-start: 0.25rem;
 
       &.tiny {
-        margin-right: 0.625rem;
+        margin-inline-end: 0.625rem;
       }
     }
 
@@ -329,14 +331,33 @@
     }
   }
 
-  @media (min-width: 1276px) {
+  @media (pointer: coarse) {
+    .back-button,
+    .HeaderActions .Button.round {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
+  }
+
+  @media (max-width: 24rem) {
+    .back-button,
+    .ChatInfo .Avatar {
+      margin-inline-end: 0.25rem;
+    }
+
+    .HeaderActions .Button {
+      margin-inline: 0;
+    }
+  }
+
+  @media (width > 1275px) {
     width: calc(100% - var(--right-column-width) - var(--middle-panel-inline-padding) * 2);
     #Main.right-column-open & {
       transform: translate3d(calc(var(--right-column-width) / -2), 0, 0);
     }
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     padding-right: max(0.5rem, env(safe-area-inset-right));
     padding-left: max(0.5rem, env(safe-area-inset-left));
   }

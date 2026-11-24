@@ -1,3 +1,5 @@
+@use "../../../../styles/mixins";
+
 .root {
   position: absolute;
   z-index: var(--z-left-header);
@@ -41,7 +43,7 @@
     opacity: 0;
   }
 
-  @media (max-width: 600px) {
+  @include mixins.single-pane() {
     inset-inline: var(--chat-list-inline-inset);
     width: auto;
   }

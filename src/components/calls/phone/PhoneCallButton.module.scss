@@ -1,12 +1,10 @@
 .root {
   display: flex;
+  flex: 0 1 4.5rem;
   flex-direction: column;
   align-items: center;
-  width: 5rem;
 
-  &:not(:first-child) {
-    margin-left: 1rem;
-  }
+  min-width: 0;
 }
 
 .button {
@@ -32,6 +30,7 @@
 
   font-size: 0.75rem;
   color: #fff;
+  text-align: center;
   text-transform: lowercase;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }

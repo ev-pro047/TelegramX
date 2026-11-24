@@ -21,17 +21,20 @@
 
   &.mobile {
     position: fixed;
-    padding: 2.25rem 0.5rem 0.75rem;
+
+    padding-top: 2.25rem;
+    padding-right: max(0.5rem, var(--safe-area-right));
+    padding-bottom: max(0.75rem, var(--safe-area-bottom));
+    padding-left: max(0.5rem, var(--safe-area-left));
+
     background: none;
     .player-seekline {
       top: 1rem;
     }
-    .playback-rate-menu .bubble {
-      bottom: 4.6875rem;
-    }
   }
 
-  &.active {
+  &.active,
+  &:focus-within {
     pointer-events: auto;
     opacity: 1;
   }
@@ -47,13 +50,17 @@
   }
 
   .Button.round {
+    flex-shrink: 0;
+
     width: 2rem;
     height: 2rem;
     margin: 0.25rem;
     padding: 0;
 
-    @media (max-width: 320px) {
-      margin: 0.125rem;
+    @media (pointer: coarse) {
+      width: 2.75rem;
+      height: 2.75rem;
+      margin: 0;
     }
   }
 
@@ -69,7 +76,8 @@
     /* stylelint-disable-next-line plugin/no-low-performance-animation-properties */
     transition: width 0.2s ease-in-out;
 
-    &:hover {
+    &:hover,
+    &:focus-within {
       overflow: hidden;
       width: var(--volume-slider-width);
       .RangeSlider__input {
@@ -84,7 +92,8 @@
     }
   }
 
-  .volume:hover + .volume-slider {
+  .volume:hover + .volume-slider,
+  .volume:focus-visible + .volume-slider {
     overflow: hidden;
     width: var(--volume-slider-width);
     .RangeSlider__input {
@@ -93,9 +102,13 @@
   }
 
   .player-time {
+    min-width: 0;
     font-variant-numeric: tabular-nums;
-    color: rgba(255, 255, 255, 0.5);
-    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.8);
+
+    > span {
+      white-space: nowrap;
+    }
   }
 
   .player-file-size {
@@ -109,24 +122,15 @@
     }
   }
 
-  .playback-rate-menu {
+  .playback-rate-anchor {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .playback-rate-menu .bubble {
+    --offset-y: calc(100% + 0.25rem);
+
+    min-width: 5rem;
     color: var(--color-text);
-    .bubble {
-      bottom: 4.1875rem;
-      min-width: 3.5rem;
-      margin-right: 5.8125rem;
-    }
-
-    &.no-fullscreen, &.no-pip {
-      .bubble {
-        margin-right: 3.3125rem;
-      }
-    }
-
-    &.no-fullscreen.no-pip {
-      .bubble {
-        margin-right: 0.8125rem;
-      }
-    }
   }
 }

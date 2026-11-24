@@ -1,3 +1,5 @@
+@use "../../styles/mixins";
+
 @layer ui.leftcolumn {
   #NewChat {
     height: 100%;
@@ -51,7 +53,7 @@
       padding-left: var(--window-controls-width);
     }
 
-    @media (max-width: 600px) {
+    @include mixins.single-pane() {
       padding: 0.5rem;
     }
   }
