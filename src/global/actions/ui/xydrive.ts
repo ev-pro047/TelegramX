@@ -11,10 +11,12 @@ addActionHandler('openXydrive', (global, actions, payload): ActionReturnType => 
     return undefined;
   }
 
-  return updateTabState(global, { xydriveOwnerId: global.currentUserId }, tabId);
+  if (global.passcode.isScreenLocked) return undefined;
+
+  return updateTabState(global, { xydriveOwnerId: global.currentUserId, xydrive: undefined }, tabId);
 });
 
 addActionHandler('closeXydrive', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, { xydriveOwnerId: undefined }, tabId);
+  return updateTabState(global, { xydriveOwnerId: undefined, xydrive: undefined }, tabId);
 });

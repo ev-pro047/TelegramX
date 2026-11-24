@@ -1,5 +1,5 @@
 import { Api as GramJs } from '../../../lib/gramjs';
-import { RPCError } from '../../../lib/gramjs/errors';
+import { FloodTestPhoneWaitError, FloodWaitError, RPCError } from '../../../lib/gramjs/errors';
 import { generateRandomBigInt } from '../../../lib/gramjs/Helpers';
 
 import type {
@@ -62,6 +62,7 @@ import { fetchFile } from '../../../util/files';
 import { compact, omit, split } from '../../../util/iteratees';
 import { getMessageKey, getMtpEphemeralMessageId } from '../../../util/keys/messageKey';
 import { getServerTime } from '../../../util/serverTime';
+import { getXydriveNextOffset } from '../../../lib/xydrive/pagination';
 import { interpolateArray } from '../../../util/waveform';
 import { API_GENERAL_ID_LIMIT, PINNED_MESSAGES_LIMIT } from '../../../limits';
 import {
@@ -245,6 +246,48 @@ export async function fetchMessages({
     count,
     topics,
   };
+}
+
+// Keep long server-mandated waits in the authenticated worker, even if the workspace closes.
+let xydriveRetryAt = 0;
+const XYDRIVE_HISTORY_PAGE_SIZE = 50;
+
+export async function fetchXydriveHistory({ offsetId }: { offsetId?: number }) {
+  const remaining = xydriveRetryAt - getServerTime();
+  if (remaining > 0) {
+    return { type: 'wait' as const, retryAfter: remaining };
+  }
+
+  try {
+    const result = await invokeRequest(new GramJs.messages.GetHistory({
+      peer: new GramJs.InputPeerSelf(),
+      offsetId: offsetId ?? DEFAULT_PRIMITIVES.INT,
+      offsetDate: DEFAULT_PRIMITIVES.INT,
+      addOffset: DEFAULT_PRIMITIVES.INT,
+      limit: XYDRIVE_HISTORY_PAGE_SIZE,
+      maxId: DEFAULT_PRIMITIVES.INT,
+      minId: DEFAULT_PRIMITIVES.INT,
+      hash: DEFAULT_PRIMITIVES.BIGINT,
+    }), { shouldThrow: true });
+
+    if (!result || result instanceof GramJs.messages.MessagesNotModified || !result.messages) {
+      return undefined;
+    }
+
+    const rawIds = result.messages.map(({ id }) => id);
+    const nextOffsetId = getXydriveNextOffset(rawIds, offsetId);
+    // A nonempty page without cursor progress must not look like completed history
+    if (rawIds.length && nextOffsetId === undefined) return undefined;
+
+    const messages = result.messages.map(buildApiMessage).filter(Boolean);
+    return { type: 'page' as const, messages, nextOffsetId, scannedCount: rawIds.length };
+  } catch (err) {
+    if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + err.seconds;
+      return { type: 'wait' as const, retryAfter: err.seconds };
+    }
+    return undefined;
+  }
 }
 
 export async function fetchMessage({ chat, messageId }: { chat: ApiChat; messageId: number }) {
