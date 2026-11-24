@@ -1,0 +1,68 @@
+.dialog {
+  min-width: 0;
+  max-width: min(56rem, calc(100vw - 3rem));
+}
+
+.workspace {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: min(28rem, 52vh);
+  padding: 1rem 0;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  max-width: 26rem;
+  text-align: center;
+}
+
+.iconBackdrop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 1.5rem;
+  color: var(--color-primary);
+  background-color: var(--color-background-secondary);
+}
+
+.icon {
+  font-size: 2.5rem;
+}
+
+.badge {
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
+}
+
+.heading {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-semibold);
+}
+
+.description {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.action {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .workspace {
+    min-height: min(22rem, 48vh);
+  }
+
+  .heading {
+    font-size: 1.25rem;
+  }
+}

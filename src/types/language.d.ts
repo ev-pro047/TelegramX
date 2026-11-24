@@ -3578,6 +3578,13 @@ export interface LangPair {
   'SettingsKeywordsLogOut': undefined;
   'SettingsKeywordsShortcuts': undefined;
   'SettingsSearchEmpty': undefined;
+  'XydriveTitle': undefined;
+  'XydriveBeta': undefined;
+  'XydriveEnable': undefined;
+  'XydriveExperimentalDesc': undefined;
+  'XydriveWelcome': undefined;
+  'XydriveFoundationDesc': undefined;
+  'XydriveOpenSaved': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {

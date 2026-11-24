@@ -261,6 +261,14 @@ const SettingsMain = ({
             <span className="title">{lang('SessionsTitle')}</span>
             <span className="subtitle">{lang('SettingsSessionsDesc')}</span>
           </ListItem>
+          <ListItem
+            icon="bug"
+            iconBg="gray"
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Experimental })}
+          >
+            {lang('SettingsExperimental')}
+          </ListItem>
         </Island>
 
         <Island>
