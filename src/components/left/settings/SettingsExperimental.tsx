@@ -28,6 +28,7 @@ type StateProps = {
   shouldForceHttpTransport?: boolean;
   shouldAllowHttpTransport?: boolean;
   shouldCollectDebugLogs?: boolean;
+  isXydriveEnabled?: boolean;
   shouldDebugExportedSenders?: boolean;
 };
 
@@ -37,6 +38,7 @@ const SettingsExperimental = ({
   shouldAllowHttpTransport,
   shouldCollectDebugLogs,
   shouldDebugExportedSenders,
+  isXydriveEnabled,
   onReset,
 }: OwnProps & StateProps) => {
   const { requestConfetti, setSharedSettingOption, requestWave } = getActions();
@@ -89,6 +91,14 @@ const SettingsExperimental = ({
         />
         <p className="settings-item-description pt-3" dir="auto">{lang('SettingsExperimentalAbout')}</p>
       </div>
+      <Island>
+        <Checkbox
+          label={lang('XydriveEnable')}
+          subLabel={lang('XydriveExperimentalDesc')}
+          checked={Boolean(isXydriveEnabled)}
+          onCheck={(isChecked) => setSharedSettingOption({ isXydriveEnabled: isChecked })}
+        />
+      </Island>
       <Island>
         <ListItem
           href={newAccountUrl}
@@ -154,6 +164,7 @@ export default memo(withGlobal(
       shouldAllowHttpTransport,
       shouldCollectDebugLogs,
       shouldDebugExportedSenders,
+      isXydriveEnabled,
     } = selectSharedSettings(global);
 
     return {
@@ -161,6 +172,7 @@ export default memo(withGlobal(
       shouldAllowHttpTransport,
       shouldCollectDebugLogs,
       shouldDebugExportedSenders,
+      isXydriveEnabled,
     };
   },
 )(SettingsExperimental));

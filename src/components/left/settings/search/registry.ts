@@ -135,6 +135,13 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     requires: 'canSendWithKeyboard',
   },
   {
+    screen: SettingsScreens.Experimental,
+    parent: SettingsScreens.Main,
+    titleKey: 'SettingsExperimental',
+    icon: 'bug',
+    iconBg: 'gray',
+  },
+  {
     screen: SettingsScreens.ActiveSessions,
     parent: SettingsScreens.Main,
     titleKey: 'SessionsTitle',
@@ -281,6 +288,7 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
 ];
 
 export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
+  ...buildEntries(SettingsScreens.Experimental, ['XydriveEnable']),
   ...buildEntries(SettingsScreens.Main, ['WalletMenuItem'], {
     requires: 'isWalletAvailable', icon: 'gram-filled', iconBg: 'blue',
   }),

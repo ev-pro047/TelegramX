@@ -79,6 +79,7 @@ import PaymentModal from '../payment/PaymentModal.async';
 import ReceiptModal from '../payment/ReceiptModal.async';
 import RightColumn from '../right/RightColumn';
 import StoryViewer from '../story/StoryViewer.async';
+import XydriveAsync from '../xydrive/Xydrive.async';
 import AttachBotRecipientPicker from './AttachBotRecipientPicker.async';
 import BotTrustModal from './BotTrustModal.async';
 import DeleteFolderDialog from './DeleteFolderDialog.async';
@@ -658,6 +659,7 @@ const Main = ({
       <AudioPlayer noUi />
       <FloatingRoundVideo />
       <ModalContainer />
+      <XydriveAsync />
       <HistoryCalendar isOpen={isHistoryCalendarOpen} />
       <StickerSetModal
         isOpen={Boolean(openedStickerSetShortName)}

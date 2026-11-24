@@ -225,6 +225,7 @@ export type TabState = {
   inviteHash?: string;
   canInstall?: boolean;
   isStatisticsShown?: boolean;
+  xydriveOwnerId?: string;
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;
   uiReadyState: 0 | 1 | 2;

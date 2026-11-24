@@ -66,6 +66,7 @@ type StateProps = {
   hasPasscode?: boolean;
   isWalletAvailable?: boolean;
   oldWalletBotId?: string;
+  isXydriveEnabled?: boolean;
 } & Pick<GlobalState, 'currentUserId' | 'archiveSettings'>;
 
 const LeftSideMenuItems = ({
@@ -80,6 +81,7 @@ const LeftSideMenuItems = ({
   hasPasscode,
   isWalletAvailable,
   oldWalletBotId,
+  isXydriveEnabled,
   onSelectArchived,
   onSelectContacts,
   onSelectSettings,
@@ -97,6 +99,7 @@ const LeftSideMenuItems = ({
     openChatWithInfo,
     openSettingsScreen,
     openWalletModal,
+    openXydrive,
   } = getActions();
   const lang = useLang();
   const [isSwitchToWebKDialogOpen, openSwitchToWebKDialog, closeSwitchToWebKDialog] = useFlag();
@@ -200,6 +203,12 @@ const LeftSideMenuItems = ({
       >
         {lang('MenuSavedMessages')}
       </MenuItem>
+      {isXydriveEnabled && currentUserId && (
+        <MenuItem icon="folder" onClick={() => openXydrive()}>
+          <span className="menu-item-name">{lang('XydriveTitle')}</span>
+          <span className="menu-item-badge">{lang('XydriveBeta')}</span>
+        </MenuItem>
+      )}
       {archiveSettings.isHidden && (
         <MenuItem
           icon="archive"
@@ -328,7 +337,7 @@ export default memo(withGlobal<OwnProps>(
     const {
       currentUserId, archiveSettings,
     } = global;
-    const { animationLevel } = selectSharedSettings(global);
+    const { animationLevel, isXydriveEnabled } = selectSharedSettings(global);
     const attachBots = global.attachMenu.bots;
 
     return {
@@ -336,6 +345,7 @@ export default memo(withGlobal<OwnProps>(
       currentUser: selectUser(global, currentUserId!),
       theme: selectTheme(global),
       animationLevel,
+      isXydriveEnabled,
       canInstall: Boolean(tabState.canInstall),
       archiveSettings,
       attachBots,

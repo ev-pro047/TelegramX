@@ -4740,3 +4740,10 @@
 "SettingsKeywordsLogOut" = "log out, sign out, exit";
 "SettingsKeywordsShortcuts" = "hotkeys, shortcuts, keyboard, keys, keybindings";
 "SettingsSearchEmpty" = "Start typing to find a setting";
+"XydriveTitle" = "Xydrive";
+"XydriveBeta" = "Beta";
+"XydriveEnable" = "Enable Xydrive";
+"XydriveExperimentalDesc" = "Open the experimental personal file workspace from the main menu.";
+"XydriveWelcome" = "Your personal file workspace";
+"XydriveFoundationDesc" = "The experimental workspace is enabled. File browsing and transfers are not available in this build.";
+"XydriveOpenSaved" = "Open Saved Messages";

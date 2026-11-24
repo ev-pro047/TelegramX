@@ -36,6 +36,7 @@ export interface SharedSettings {
   shouldForceHttpTransport?: boolean;
   shouldAllowHttpTransport?: boolean;
   shouldCollectDebugLogs?: boolean;
+  isXydriveEnabled?: boolean;
   shouldDebugExportedSenders?: boolean;
   shouldWarnAboutFiles?: boolean;
   shouldSkipBrowserCloseConfirmation: boolean;
