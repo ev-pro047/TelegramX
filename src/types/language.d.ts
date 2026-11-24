@@ -3620,6 +3620,36 @@ export interface LangPair {
   'XydriveUnmount': undefined;
   'XydriveEmptyFolder': undefined;
   'XydriveFolderEnd': undefined;
+  'XydriveExplorer': undefined;
+  'XydriveSearch': undefined;
+  'XydriveFilter': undefined;
+  'XydriveAllTypes': undefined;
+  'XydriveSort': undefined;
+  'XydriveSortDate': undefined;
+  'XydriveSortName': undefined;
+  'XydriveSortSize': undefined;
+  'XydriveSortType': undefined;
+  'XydriveAscending': undefined;
+  'XydriveDescending': undefined;
+  'XydriveGrid': undefined;
+  'XydriveList': undefined;
+  'XydriveCompleteScope': undefined;
+  'XydrivePartialScope': undefined;
+  'XydriveShowing': undefined;
+  'XydriveSelected': undefined;
+  'XydriveSelectVisible': undefined;
+  'XydriveClearSelection': undefined;
+  'XydriveNoMatches': undefined;
+  'XydriveNoLoadedMatches': undefined;
+  'XydriveClearFilters': undefined;
+  'XydriveDeselectFile': undefined;
+  'XydriveSelectFile': undefined;
+  'XydriveFileActions': undefined;
+  'XydriveDetails': undefined;
+  'XydriveOpenMessage': undefined;
+  'XydriveMimeType': undefined;
+  'XydriveUnknownValue': undefined;
+  'XydriveLoadingOlder': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {

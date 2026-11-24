@@ -2,7 +2,7 @@ import { memo, useEffect } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiChat } from '../../api/types';
-import type { XydriveMount, XydriveState } from '../../lib/xydrive/types';
+import type { XydriveFile, XydriveMount, XydriveState } from '../../lib/xydrive/types';
 
 import { selectTabState } from '../../global/selectors';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
@@ -29,7 +29,7 @@ const XydriveAsync = ({
   isEnabled, currentUserId, xydriveOwnerId, isScreenLocked, sourceId, folders, chats, mountingId, mountError, drive,
 }: StateProps) => {
   const {
-    closeXydrive, openChat, loadXydrivePage, selectXydriveSource, mountXydriveChannel, unmountXydriveChannel,
+    closeXydrive, openChat, focusMessage, loadXydrivePage, selectXydriveSource, mountXydriveChannel, unmountXydriveChannel,
   } = getActions();
   const isOpen = Boolean(isEnabled && !isScreenLocked && currentUserId && xydriveOwnerId === currentUserId);
   const Xydrive = useModuleLoader(Bundles.Xydrive, 'Xydrive', !isOpen);
@@ -56,6 +56,14 @@ const XydriveAsync = ({
     openChat({ id: currentUserId, shouldReplaceHistory: true });
   });
 
+  const handleOpenMessage = useLastCallback((file: XydriveFile) => {
+    if (!isOpen || !drive || drive.ownerId !== currentUserId || drive.sourceId !== (sourceId || currentUserId)
+      || !drive.files.some(({ id, chatId, messageId }) => id === file.id && chatId === file.chatId
+        && messageId === file.messageId)) return;
+    closeXydrive();
+    focusMessage({ chatId: file.chatId, messageId: file.messageId, shouldReplaceHistory: true });
+  });
+
   const handleSelectSource = useLastCallback((channelId?: string) => {
     if (isOpen) selectXydriveSource({ channelId });
   });
@@ -80,6 +88,7 @@ const XydriveAsync = ({
       onClose={handleClose}
       onOpenSaved={handleOpenSaved}
       onLoadMore={handleLoadMore}
+      onOpenMessage={handleOpenMessage}
       onSelectSource={handleSelectSource}
       onMount={handleMount}
       onUnmount={handleUnmount}
