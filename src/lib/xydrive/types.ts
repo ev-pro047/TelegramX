@@ -6,10 +6,11 @@ export type XydriveFile = {
   messageId: number;
   mediaId?: string;
   thumbnailHash?: string;
-  previewKind?: 'viewer' | 'audio';
+  previewKind?: 'viewer' | 'audio' | 'text';
   name: string;
   mimeType?: string;
   size?: number;
+  duration?: number;
   date: number;
   category: XydriveCategory;
   mediaType: 'photo' | 'video' | 'audio' | 'voice' | 'document' | 'sticker';
@@ -46,7 +47,8 @@ export type XydriveFileLabel = {
   lastOpened?: number;
 };
 
-export type XydriveFolderLabel = { favorite?: boolean; pinned?: boolean };
+export type XydriveFolderTone = 'default' | 'teal' | 'amber' | 'violet';
+export type XydriveFolderLabel = { favorite?: boolean; pinned?: boolean; tone?: XydriveFolderTone };
 
 export type XydriveOrganization = {
   ownerId: string;
@@ -67,7 +69,16 @@ export type XydriveIndex = {
   sources: Record<string, XydriveIndexSource>;
   status: 'idle' | 'syncing' | 'partial' | 'ready' | 'error' | 'limited';
   requestId?: number;
+  scan?: { sourceId?: string; pages: number };
 };
 
 export type XydriveMutationStatus = 'working' | 'complete' | 'wait' | 'unavailable' | 'error'
   | 'copied' | 'copyUnknown' | 'deleteUnknown';
+
+export type XydriveMutation = {
+  id: number;
+  ownerId: string;
+  total: number;
+  completed: number;
+  status: XydriveMutationStatus;
+};

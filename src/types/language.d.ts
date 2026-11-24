@@ -3746,6 +3746,63 @@ export interface LangPair {
   'XydriveClipboardError': undefined;
   'XydriveManagedFolder': undefined;
   'XydriveMountedChannel': undefined;
+  'XydriveComfortable': undefined;
+  'XydriveCompact': undefined;
+  'XydriveFolderSearch': undefined;
+  'XydriveCollapseFolder': undefined;
+  'XydriveExpandFolder': undefined;
+  'XydriveSourceIndexed': undefined;
+  'XydriveNoSubfolders': undefined;
+  'XydriveCanUseDestination': undefined;
+  'XydriveCannotUseDestination': undefined;
+  'XydriveAlias': undefined;
+  'XydriveKnownSize': undefined;
+  'XydriveIndexCoverage': undefined;
+  'XydriveSelectForDetails': undefined;
+  'XydriveForward': undefined;
+  'XydriveFilterExtension': undefined;
+  'XydriveAscendingShort': undefined;
+  'XydriveDescendingShort': undefined;
+  'XydriveDescendantScope': undefined;
+  'XydriveFileFilterScope': undefined;
+  'XydriveIndexSearchMore': undefined;
+  'XydriveSelectionActions': undefined;
+  'XydriveWelcomeGuide': undefined;
+  'XydriveLoadOlder': undefined;
+  'XydriveSelectLoaded': undefined;
+  'XydriveUnsupportedPreview': undefined;
+  'XydriveFolderCreated': undefined;
+  'XydriveFolderRenamed': undefined;
+  'XydriveFolderMounted': undefined;
+  'XydriveFolderMoved': undefined;
+  'XydriveFolderUnmounted': undefined;
+  'XydriveRenameFolder': undefined;
+  'XydriveRenameFolderDesc': undefined;
+  'XydriveRenameFolderError': undefined;
+  'XydriveManagedPolicy': undefined;
+  'XydriveMountedPolicy': undefined;
+  'XydriveUsageByFolder': undefined;
+  'XydriveLargestFiles': undefined;
+  'XydriveRecentActivity': undefined;
+  'XydriveNoSizes': undefined;
+  'XydriveSourcePartial': undefined;
+  'XydriveSourceUnscanned': undefined;
+  'XydriveTransferErrors': undefined;
+  'XydriveQueueProgress': undefined;
+  'XydriveDuplicateTitle': undefined;
+  'XydriveDuplicateChoices': undefined;
+  'XydriveLibraryScope': undefined;
+  'XydrivePinnedOrder': undefined;
+  'XydriveFolderColor': undefined;
+  'XydriveFolderDefault': undefined;
+  'XydriveFolderTeal': undefined;
+  'XydriveFolderAmber': undefined;
+  'XydriveFolderViolet': undefined;
+  'XydriveShortcuts': undefined;
+  'XydriveKeyboardOpen': undefined;
+  'XydriveKeyboardSelect': undefined;
+  'XydriveKeyboardSearch': undefined;
+  'XydriveTouchSelect': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -6074,6 +6131,45 @@ export interface LangPairWithVariables<V = LangVariable> {
   'VoiceChatJoinConfirmChannel': {
     'chat': V;
   };
+  'XydriveSelectNamed': {
+    'name': V;
+  };
+  'XydriveDeselectNamed': {
+    'name': V;
+  };
+  'XydriveActionsNamed': {
+    'name': V;
+  };
+  'XydrivePreviewNamed': {
+    'name': V;
+  };
+  'XydriveIndexedCount': {
+    'count': V;
+  };
+  'XydriveItemCount': {
+    'count': V;
+  };
+  'XydriveBulkProgress': {
+    'done': V;
+    'total': V;
+  };
+  'XydriveLoadedCount': {
+    'count': V;
+  };
+  'XydriveScanProgress': {
+    'folder': V;
+    'count': V;
+  };
+  'XydriveDropDestination': {
+    'folder': V;
+  };
+  'XydriveTransferProgressNamed': {
+    'direction': V;
+    'name': V;
+  };
+  'XydriveDismissTransfer': {
+    'name': V;
+  };
 }
 
 export interface LangPairPlural {
@@ -7075,7 +7171,12 @@ export interface LangKeyGroups {
       | 'WalletConnectRequestAppPending'
       | 'WalletConnectRequestAppProcessed'
       | 'WalletConnectRequestAppDeclined'
-      | 'WalletConnectRequestAppExpired';
+      | 'WalletConnectRequestAppExpired'
+      | 'XydriveSelectNamed'
+      | 'XydriveDeselectNamed'
+      | 'XydriveActionsNamed'
+      | 'XydrivePreviewNamed'
+      | 'XydriveDismissTransfer';
     variables: 'name';
   };
   'limit,premiumLimit': {
@@ -7314,7 +7415,10 @@ export interface LangKeyGroups {
       | 'BoostGiftStarsPerUser'
       | 'ConnectedAccountsLimitSubtitle'
       | 'GiveawayStarsPrepaidTitle'
-      | 'SimilarChannelsLimitSubtitle';
+      | 'SimilarChannelsLimitSubtitle'
+      | 'XydriveIndexedCount'
+      | 'XydriveItemCount'
+      | 'XydriveLoadedCount';
     variables: 'count';
   };
   'duration,time': {
@@ -8366,6 +8470,26 @@ export interface LangKeyGroups {
     keys:
       | 'PeerPickerUnknownPeer';
     variables: 'id';
+  };
+  'done,total': {
+    keys:
+      | 'XydriveBulkProgress';
+    variables: 'done' | 'total';
+  };
+  'count,folder': {
+    keys:
+      | 'XydriveScanProgress';
+    variables: 'count' | 'folder';
+  };
+  'folder': {
+    keys:
+      | 'XydriveDropDestination';
+    variables: 'folder';
+  };
+  'direction,name': {
+    keys:
+      | 'XydriveTransferProgressNamed';
+    variables: 'direction' | 'name';
   };
 }
 

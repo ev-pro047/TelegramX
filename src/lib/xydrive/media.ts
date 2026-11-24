@@ -4,7 +4,7 @@ import type { XydriveFile } from './types';
 import {
   getMediaHash, getMessageIsSpoiler, isDocumentPhoto, isDocumentVideo,
 } from '../../global/helpers/messageMedia';
-import { getXydriveFile } from './fileMetadata';
+import { canPreviewXydriveText, getXydriveFile } from './fileMetadata';
 
 export function getXydriveMediaFile(message: ApiMessage, sourceId: string): XydriveFile | undefined {
   const file = getXydriveFile(message, sourceId);
@@ -18,6 +18,7 @@ export function getXydriveMediaFile(message: ApiMessage, sourceId: string): Xydr
     return { ...file, previewKind: 'viewer', thumbnailHash: getMediaHash(video, 'pictogram') };
   }
   if (file.mediaType === 'document' && document) {
+    if (canPreviewXydriveText(file)) return { ...file, previewKind: 'text' };
     const shouldForceDownload = document.innerMediaType === 'photo' && document.mediaSize
       && !document.mediaSize.fromDocumentAttribute && !document.mediaSize.fromPreload;
     if (!shouldForceDownload && (isDocumentPhoto(document) || isDocumentVideo(document))) {

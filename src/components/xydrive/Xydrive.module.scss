@@ -347,3 +347,334 @@
     font-size: 1.25rem;
   }
 }
+
+.page {
+  --xydrive-space: 0.875rem;
+  --xydrive-control: 2.5rem;
+  --xydrive-radius: 0.625rem;
+  --xydrive-card-radius: 0.875rem;
+}
+
+.compact {
+  --xydrive-space: 0.5rem;
+  --xydrive-control: 2.25rem;
+}
+
+.topbar {
+  min-height: 3rem;
+  padding-block: 0.125rem;
+}
+
+.toolbar {
+  align-items: center;
+  padding-block: var(--xydrive-space);
+}
+
+.location {
+  display: flex;
+  flex-direction: column;
+}
+
+.heading {
+  font-size: 1.25rem;
+}
+
+.breadcrumb {
+  order: 1;
+  min-height: 0;
+  margin: 0;
+}
+
+.crumb {
+  min-height: var(--xydrive-control);
+}
+
+.collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.collapsed .sidebar,
+.drawerBackdrop {
+  display: none;
+}
+
+.overview > section {
+  width: min(100%, 72rem);
+  margin-inline: auto;
+}
+
+@media (max-width: 52rem), (max-width: 950px) and (max-height: 450px) {
+  .layout {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar.drawerOpen {
+    position: absolute;
+    z-index: 6;
+    inset-block: 0;
+    inset-inline-start: 0;
+
+    display: block;
+
+    width: min(19rem, 87%);
+
+    box-shadow: var(--shadow-island);
+  }
+
+  .drawerBackdrop {
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+
+    display: block;
+
+    border: 0;
+
+    background-color: #0005;
+  }
+
+  .toolbar {
+    flex-wrap: nowrap;
+    min-height: 3rem;
+    padding-block: 0.25rem;
+  }
+
+  .location {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .heading {
+    font-size: 1rem;
+  }
+
+  .crumb {
+    min-height: 1.75rem;
+  }
+
+  .actions {
+    flex-wrap: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .navItem,
+  .more {
+    transition: background-color 120ms ease;
+  }
+}
+
+.accountName {
+  overflow: hidden;
+
+  max-width: 12rem;
+
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeSection,
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.treeSection {
+  gap: 0.375rem;
+  margin-block: 0.5rem;
+}
+
+.treeRow {
+  display: flex;
+  align-items: center;
+
+  min-width: 0;
+  min-height: var(--xydrive-control);
+  border-radius: var(--xydrive-radius);
+}
+
+.treeToggle,
+.treeTitle {
+  display: flex;
+  align-items: center;
+
+  min-width: 0;
+  min-height: var(--xydrive-control);
+  padding: 0;
+  border: 0;
+
+  font: inherit;
+  color: inherit;
+  text-align: start;
+
+  background: transparent;
+}
+
+.treeToggle {
+  cursor: pointer;
+  flex: 0 0 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+.treeToggle:disabled {
+  cursor: default;
+}
+
+.treeTitle {
+  cursor: pointer;
+  flex: 1;
+  gap: 0.375rem;
+}
+
+.treeTitle span {
+  overflow: hidden;
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treePager {
+  display: flex;
+  justify-content: space-between;
+}
+
+@media (max-width: 52rem), (max-width: 950px) and (max-height: 450px) {
+  .accountName,
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar.drawerOpen .treeToggle {
+    flex-basis: 2.75rem;
+    width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .treeTitle span {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}
+
+.destinationList {
+  overflow: auto;
+  max-height: min(17rem, 32dvh);
+}
+
+.destinationList .navItem {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.mountList {
+  max-height: min(24rem, 42dvh);
+}
+
+.textPreview {
+  overflow: auto;
+
+  max-height: 65dvh;
+  padding: 0.875rem;
+  border-radius: 0.625rem;
+
+  line-height: 1.55;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+
+  background: var(--color-background-secondary);
+}
+
+.treeCoverage {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 36rem) {
+  .toolbar .location {
+    flex-basis: auto;
+  }
+
+  .topbar .brandMark {
+    display: none;
+  }
+
+  .drawerOpen .navigation .navItem {
+    min-height: 2.75rem;
+  }
+
+  .toolbar .more,
+  .topbar .more {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .toolbar .actions > :global(.Button.translucent-bordered) {
+    display: none;
+  }
+}
+
+.folderColors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+
+  padding: 0.5rem;
+  border: 1px solid var(--color-borders);
+  border-radius: 0.625rem;
+}
+
+.tone {
+  min-height: 2.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+
+  font: inherit;
+  color: var(--color-text);
+
+  background: var(--color-background-secondary);
+}
+
+.tone[aria-pressed='true'] {
+  border-color: var(--color-primary);
+}
+
+.tone[data-tone='teal'] {
+  color: light-dark(#17624f, #9ee1c9);
+  background: light-dark(#dcf7ee, #18332b);
+}
+
+.tone[data-tone='amber'] {
+  color: light-dark(#69591b, #f0d895);
+  background: light-dark(#f6efd7, #382f1a);
+}
+
+.tone[data-tone='violet'] {
+  color: light-dark(#563588, #d5b8ff);
+  background: light-dark(#eee5f8, #302442);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .overview {
+    animation: sectionAppear 140ms ease-out;
+  }
+}
+
+@keyframes sectionAppear {
+  from { opacity: 0.75; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 52rem), (max-width: 950px) and (max-height: 450px) {
+  .breadcrumb .crumb {
+    min-height: 2.75rem;
+  }
+}

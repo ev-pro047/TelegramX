@@ -5,62 +5,65 @@ import type { TransferStatus } from '../../lib/xydrive/transfers';
 import type { XydriveFile } from '../../lib/xydrive/types';
 import type { RegularLangKey } from '../../types/language';
 
+import { getFileIcon } from '../../lib/xydrive/collection';
+import { classifyXydriveFile } from '../../lib/xydrive/fileMetadata';
 import {
-  cancelAllXydriveTransfers, cancelXydriveTransfer, clearXydriveTransferHistory,
-  enqueueXydriveUploads, getXydriveTransfers,
-  isActiveTransfer, retryXydriveTransfer, subscribeXydriveTransfers,
+  cancelAllXydriveTransfers, cancelXydriveTransfer, clearXydriveTransferHistory, dismissXydriveTransfer,
+  enqueueXydriveUploads, getXydriveTransfers, isActiveTransfer, retryXydriveTransfer, subscribeXydriveTransfers,
 } from '../../lib/xydrive/transfers';
+import { formatTimeDuration } from '../../util/dates/duration';
 import { formatFileSize } from '../../util/text/textFormat';
 
 import useLang from '../../hooks/useLang';
 
 import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
+import Modal from '../ui/Modal';
 
 import styles from './XydriveTransfers.module.scss';
 
 const STATUS: Record<TransferStatus, RegularLangKey> = {
-  queued: 'XydriveTransferQueued',
-  active: 'XydriveTransferActive',
-  committing: 'XydriveTransferCommitting',
-  complete: 'XydriveTransferComplete',
-  handedOff: 'XydriveTransferHandedOff',
-  failed: 'XydriveTransferFailed',
-  canceled: 'XydriveTransferCanceled',
-  wait: 'XydriveTransferWait',
-  unavailable: 'XydriveTransferUnavailable',
-  unknown: 'XydriveTransferUnknown',
-  tooLarge: 'XydriveTransferTooLarge',
-  empty: 'XydriveTransferEmptyFile',
+  queued: 'XydriveTransferQueued', active: 'XydriveTransferActive', committing: 'XydriveTransferCommitting',
+  complete: 'XydriveTransferComplete', handedOff: 'XydriveTransferHandedOff', failed: 'XydriveTransferFailed',
+  canceled: 'XydriveTransferCanceled', wait: 'XydriveTransferWait', unavailable: 'XydriveTransferUnavailable',
+  unknown: 'XydriveTransferUnknown', tooLarge: 'XydriveTransferTooLarge', empty: 'XydriveTransferEmptyFile',
   busy: 'XydriveTransferBusy',
 };
 
-type Filter = 'all' | 'upload' | 'download' | 'history';
-const FILTERS: { id: Filter; label: RegularLangKey }[] = [
-  { id: 'all', label: 'XydriveTransferAll' },
-  { id: 'upload', label: 'XydriveTransferUploads' },
-  { id: 'download', label: 'XydriveTransferDownloads' },
-  { id: 'history', label: 'XydriveTransferHistory' },
-];
+const FILTERS = [
+  ['all', 'XydriveTransferAll'], ['upload', 'XydriveTransferUploads'], ['download', 'XydriveTransferDownloads'],
+  ['history', 'XydriveTransferHistory'], ['errors', 'XydriveTransferErrors'],
+] as const;
+const MAX_DISPLAY_FILES = 100;
+
+type Filter = (typeof FILTERS)[number][0];
+
+type Pending = {
+  ownerId?: string;
+  sourceId?: string;
+  files: File[];
+  duplicateIds: Set<number>;
+  skipped: Set<number>;
+};
 
 type OwnProps = {
   ownerId?: string;
   sourceId?: string;
+  destinationName?: string;
   files: readonly XydriveFile[];
   pickerRef: ElementRef<HTMLInputElement>;
   canUpload: boolean;
   children: TeactNode[];
 };
 
-const XydriveTransfers = ({ ownerId, sourceId, files, pickerRef, canUpload, children }: OwnProps) => {
+const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef, canUpload, children }: OwnProps) => {
   const lang = useLang();
   const dragDepthRef = useRef(0);
-  const lastActiveRef = useRef(0);
   const [rows, setRows] = useState(() => getXydriveTransfers(ownerId));
   const [filter, setFilter] = useState<Filter>('all');
-  const [expanded, setExpanded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [pending, setPending] = useState<{ ownerId?: string; sourceId?: string; files: File[] }>();
+  const [pending, setPending] = useState<Pending>();
 
   useEffect(() => {
     const update = () => setRows(getXydriveTransfers(ownerId));
@@ -68,39 +71,42 @@ const XydriveTransfers = ({ ownerId, sourceId, files, pickerRef, canUpload, chil
     return subscribeXydriveTransfers(update);
   }, [ownerId]);
 
-  function addFiles(selected: File[]) {
-    if (!canUpload || !selected.length) return;
-    const names = new Set(files.map(({ name }) => name));
-    if (selected.some(({ name }) => {
-      if (names.has(name)) return true;
-      names.add(name);
-      return false;
-    })) {
-      setPending({ ownerId, sourceId, files: selected });
-      return;
-    }
-    enqueueXydriveUploads(selected);
-    setExpanded(true);
-  }
-
-  const ownedRows = rows.filter((row) => row.ownerId === ownerId);
-  const active = ownedRows.filter(({ status }) => isActiveTransfer(status)).length;
-  const visible = ownedRows.filter(({ status, direction }) => filter === 'all'
-    || (filter === 'history' ? !isActiveTransfer(status) : direction === filter));
-
-  useEffect(() => {
-    if (active && !lastActiveRef.current) setExpanded(true);
-    lastActiveRef.current = active;
-  }, [active]);
-
   useEffect(() => {
     dragDepthRef.current = 0;
     setIsDragging(false);
     setPending(undefined);
   }, [ownerId, sourceId, canUpload]);
 
-  const pendingFiles = canUpload && pending?.ownerId === ownerId && pending?.sourceId === sourceId
-    ? pending?.files : undefined;
+  function addFiles(selected: File[]) {
+    if (!canUpload || !selected.length) return;
+    const names = new Set(files.map(({ name }) => name));
+    const duplicateIds = new Set<number>();
+    selected.forEach((file, position) => {
+      if (names.has(file.name)) duplicateIds.add(position);
+      names.add(file.name);
+    });
+    if (duplicateIds.size) {
+      setPending({ ownerId, sourceId, files: selected, duplicateIds, skipped: new Set(duplicateIds) });
+    } else {
+      enqueueXydriveUploads(selected);
+    }
+  }
+
+  const ownedRows = rows.filter((row) => row.ownerId === ownerId);
+  const active = ownedRows.filter(({ status }) => isActiveTransfer(status));
+  const totalBytes = active.reduce((sum, { size }) => sum + (size || 0), 0);
+  const canShowTotals = totalBytes > 0 && active.every(({ size }) => size !== undefined);
+  const transferred = active.reduce((sum, { size, progress }) => sum + (size || 0) * (progress || 0), 0);
+  const visible = ownedRows.filter(({ status, direction }) => {
+    if (filter === 'all') return true;
+    if (filter === 'history') return !isActiveTransfer(status);
+    if (filter === 'errors') return isTransferError(status);
+    return direction === filter;
+  });
+  const currentPending = canUpload && pending?.ownerId === ownerId && pending?.sourceId === sourceId
+    ? pending : undefined;
+  const destination = destinationName || lang('XydriveRoot');
+  const aggregate = canShowTotals ? `${lang.number(Math.floor(transferred / totalBytes * 100))}%` : undefined;
 
   return (
     <div className={styles.workspace}>
@@ -110,7 +116,7 @@ const XydriveTransfers = ({ ownerId, sourceId, files, pickerRef, canUpload, chil
           if (!event.dataTransfer.types.includes('Files')) return;
           event.preventDefault();
           if (!canUpload) return;
-          dragDepthRef.current += 1;
+          dragDepthRef.current++;
           setIsDragging(true);
         }}
         onDragOver={(event) => {
@@ -119,8 +125,7 @@ const XydriveTransfers = ({ ownerId, sourceId, files, pickerRef, canUpload, chil
           event.dataTransfer.dropEffect = canUpload ? 'copy' : 'none';
         }}
         onDragLeave={() => {
-          if (dragDepthRef.current <= 0) return;
-          dragDepthRef.current -= 1;
+          dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
           if (!dragDepthRef.current) setIsDragging(false);
         }}
         onDrop={(event) => {
@@ -133,9 +138,9 @@ const XydriveTransfers = ({ ownerId, sourceId, files, pickerRef, canUpload, chil
       >
         {children}
         {canUpload && isDragging && (
-          <div className={styles.dropOverlay}>
+          <div className={styles.dropOverlay} role="status">
             <Icon name="arrow-up-circle-filled" />
-            <strong>{lang('XydriveDropFiles')}</strong>
+            <strong dir="auto">{lang('XydriveDropDestination', { folder: destination })}</strong>
           </div>
         )}
       </div>
@@ -151,44 +156,36 @@ const XydriveTransfers = ({ ownerId, sourceId, files, pickerRef, canUpload, chil
           event.currentTarget.value = '';
         }}
       />
-      <section className={styles.panel} aria-label={lang('XydriveTransfers')}>
-        {pendingFiles && (
-          <div className={styles.toolbar} role="alert">
-            <span>{lang('XydriveTransferDuplicate')}</span>
-            <Button
-              size="tiny"
-              onClick={() => {
-                enqueueXydriveUploads(pendingFiles);
-                setPending(undefined);
-                setExpanded(true);
-              }}
-            >
-              {lang('XydriveUpload')}
-            </Button>
-            <Button size="tiny" color="translucent" onClick={() => setPending(undefined)}>
-              {lang('XydriveTransferCancel')}
-            </Button>
-          </div>
-        )}
+      <div className={styles.panel}>
         <button
           type="button"
           className={styles.heading}
-          aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
+          onClick={() => setIsOpen(true)}
         >
-          <span className={styles.headingLabel}>
-            <Icon name="download" />
-            {lang('XydriveTransfers')}
-          </span>
-          <span className={styles.headingLabel}>
-            {active > 0 && lang.number(active)}
-            <span aria-hidden="true">{expanded ? '▴' : '▾'}</span>
-          </span>
+          <Icon name="download" />
+          {lang('XydriveTransfers')}
+          {active.length > 0 && (
+            <span className={styles.badge}>
+              {lang.number(active.length)}
+              {aggregate && ` · ${aggregate}`}
+            </span>
+          )}
+          {ownedRows.some(({ status }) => isTransferError(status)) && <Icon name="info" />}
         </button>
-        {expanded && (
-          <>
+      </div>
+      {isOpen && (
+        <Modal
+          isOpen
+          hasCloseButton
+          title={lang('XydriveTransfers')}
+          dialogClassName={styles.sheet}
+          onClose={() => setIsOpen(false)}
+        >
+          <div className={styles.transferContent}>
             <div className={styles.toolbar}>
-              {FILTERS.map(({ id, label }) => (
+              {FILTERS.map(([id, label]) => (
                 <button
                   key={id}
                   type="button"
@@ -199,59 +196,147 @@ const XydriveTransfers = ({ ownerId, sourceId, files, pickerRef, canUpload, chil
                   {lang(label)}
                 </button>
               ))}
-              {active > 0 && (
-                <Button size="tiny" color="translucent" onClick={() => cancelAllXydriveTransfers(ownerId)}>
+            </div>
+            {canShowTotals && (
+              <label className={styles.meta}>
+                {lang('XydriveQueueProgress')}
+                {' '}
+                ·
+                {aggregate}
+                <progress className={styles.progress} value={transferred} max={totalBytes} />
+              </label>
+            )}
+            <div className={styles.list}>
+              {!visible.length && <p className={styles.meta}>{lang('XydriveTransferEmpty')}</p>}
+              {visible.map((row) => {
+                const percent = row.progress === undefined ? undefined
+                  : `${lang.number(Math.round(row.progress * 100))}%`;
+                const isUpload = row.direction === 'upload';
+                const direction = lang(isUpload ? 'XydriveTransferUploads' : 'XydriveTransferDownloads');
+                const terminalIcon = isTransferError(row.status) ? 'info' : row.status === 'canceled' ? 'close'
+                  : row.status === 'complete' || row.status === 'handedOff' ? 'check' : undefined;
+                return (
+                  <div key={row.id} className={styles.transfer} data-status={row.status}>
+                    <span className={styles.transferIcon}>
+                      <Icon name={getFileIcon(classifyXydriveFile(row.name))} />
+                    </span>
+                    <div className={styles.info}>
+                      <strong className={styles.name} dir="auto">{row.name}</strong>
+                      <span className={styles.meta}>
+                        <Icon name={isUpload ? 'arrow-up-circle-filled' : 'download'} ariaLabel={direction} />
+                        {lang(STATUS[row.status])}
+                        {terminalIcon && <Icon name={terminalIcon} />}
+                        {percent && ` · ${percent}`}
+                        {row.size !== undefined && ` · ${formatFileSize(lang, row.size)}`}
+                      </span>
+                      <span className={styles.meta} dir="auto">{row.destinationName || lang('XydriveRoot')}</span>
+                      {isActiveTransfer(row.status) && (
+                        <progress
+                          className={styles.progress}
+                          max={1}
+                          value={row.progress}
+                          aria-label={lang('XydriveTransferProgressNamed', { direction, name: row.name })}
+                        />
+                      )}
+                      {row.size && row.speed && row.progress !== undefined ? (
+                        <span className={styles.meta}>
+                          {formatTimeDuration(lang, Math.ceil(row.size * (1 - row.progress) / row.speed))}
+                          {' · '}
+                          {formatFileSize(lang, Math.round(row.speed))}
+                          /s
+                        </span>
+                      ) : undefined}
+                    </div>
+                    {(row.status === 'queued' || row.status === 'active') && (
+                      <Button size="tiny" color="translucent" noFastClick onClick={() => cancelXydriveTransfer(row.id)}>
+                        {lang('XydriveTransferCancel')}
+                      </Button>
+                    )}
+                    {row.canRetry && (
+                      <Button size="tiny" color="translucent" noFastClick onClick={() => retryXydriveTransfer(row.id)}>
+                        {lang('XydriveTransferRetry')}
+                      </Button>
+                    )}
+                    {!isActiveTransfer(row.status) && (
+                      <button
+                        type="button"
+                        className={styles.filter}
+                        aria-label={lang('XydriveDismissTransfer', { name: row.name })}
+                        onClick={() => dismissXydriveTransfer(row.id, ownerId)}
+                      >
+                        <Icon name="close" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className={styles.toolbar}>
+              {active.length > 0 && (
+                <Button
+                  size="tiny"
+                  color="translucent"
+                  noFastClick
+                  onClick={() => cancelAllXydriveTransfers(ownerId)}
+                >
                   {lang('XydriveTransferCancelAll')}
                 </Button>
               )}
-              <Button size="tiny" color="translucent" onClick={() => clearXydriveTransferHistory(ownerId)}>
+              <Button
+                size="tiny"
+                color="translucent"
+                noFastClick
+                onClick={() => clearXydriveTransferHistory(ownerId)}
+              >
                 {lang('XydriveTransferClear')}
               </Button>
             </div>
+          </div>
+        </Modal>
+      )}
+      {currentPending && (
+        <Modal isOpen isSlim hasCloseButton title={lang('XydriveDuplicateTitle')} onClose={() => setPending(undefined)}>
+          <div className={styles.transferContent}>
+            <p className={styles.meta} dir="auto">{lang('XydriveDropDestination', { folder: destination })}</p>
+            <p className={styles.meta}>{lang('XydriveDuplicateChoices')}</p>
             <div className={styles.list}>
-              {!visible.length && <span className={styles.meta}>{lang('XydriveTransferEmpty')}</span>}
-              {visible.map((row) => (
-                <div key={row.id} className={styles.transfer}>
-                  <div className={styles.info}>
-                    <strong className={styles.name} dir="auto">{row.name}</strong>
-                    <span className={styles.meta}>
-                      {row.direction === 'upload' ? '↑' : '↓'}
-                      {' '}
-                      {lang(STATUS[row.status])}
-                      {row.size !== undefined ? ` · ${formatFileSize(lang, row.size)}` : ''}
-                    </span>
-                    <span className={styles.meta} dir="auto">{row.destinationName || lang('XydriveRoot')}</span>
-                    {row.progress !== undefined && isActiveTransfer(row.status) && (
-                      <progress className={styles.progress} max={1} value={row.progress} />
-                    )}
-                    {row.speed ? (
-                      <span className={styles.meta}>
-                        {formatFileSize(lang, Math.round(row.speed))}
-                        /s
-                        {row.size && row.progress !== undefined
-                          ? ` · ~${Math.ceil(row.size * (1 - row.progress) / row.speed)}s` : ''}
-                      </span>
-                    ) : undefined}
-                  </div>
-                  {(row.status === 'queued' || row.status === 'active') && (
-                    <Button size="tiny" color="translucent" onClick={() => cancelXydriveTransfer(row.id)}>
-                      {lang('XydriveTransferCancel')}
-                    </Button>
-                  )}
-                  {row.canRetry && (
-                    <Button size="tiny" color="translucent" onClick={() => retryXydriveTransfer(row.id)}>
-                      {lang('XydriveTransferRetry')}
-                    </Button>
-                  )}
-                </div>
+              {[...currentPending.duplicateIds].slice(0, MAX_DISPLAY_FILES).map((position) => (
+                <label className={styles.duplicate} key={position}>
+                  <input
+                    type="checkbox"
+                    checked={!currentPending.skipped.has(position)}
+                    onChange={(event) => {
+                      const skip = new Set(currentPending.skipped);
+                      if (event.currentTarget.checked) skip.delete(position);
+                      else skip.add(position);
+                      setPending({ ...currentPending, skipped: skip });
+                    }}
+                  />
+                  <span dir="auto">{currentPending.files[position].name}</span>
+                </label>
               ))}
             </div>
-            <span className={styles.meta}>{lang('XydriveTransferLimit')}</span>
-          </>
-        )}
-      </section>
+            <Button
+              size="smaller"
+              noFastClick
+              disabled={currentPending.files.length === currentPending.skipped.size}
+              onClick={() => {
+                const selected = currentPending.files.filter((_, position) => !currentPending.skipped.has(position));
+                enqueueXydriveUploads(selected);
+                setPending(undefined);
+              }}
+            >
+              {lang('XydriveUpload')}
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
+
+function isTransferError(status: TransferStatus) {
+  return !isActiveTransfer(status) && status !== 'complete' && status !== 'handedOff' && status !== 'canceled';
+}
 
 export default memo(XydriveTransfers);

@@ -417,12 +417,15 @@ export interface ActionPayloads {
   loadXydrivePage: ({ shouldRefresh?: boolean } & WithTabId) | undefined;
   createXydriveFolder: ({ title: string; parentId?: string } & WithTabId);
   labelXydriveFile: ({ fileId: string; alias?: string; favorite?: boolean; pinned?: boolean; opened?: boolean } & WithTabId);
-  labelXydriveFolder: ({ channelId: string; favorite?: boolean; pinned?: boolean } & WithTabId);
+  labelXydriveItems: ({ fileIds: string[]; folderIds: string[]; favorite?: boolean; pinned?: boolean } & WithTabId);
+  labelXydriveFolder: ({ channelId: string; favorite?: boolean; pinned?: boolean; tone?: import('../../lib/xydrive/types').XydriveFolderTone } & WithTabId);
   setXydriveFolderParent: ({ channelId: string; parentId?: string } & WithTabId);
-  mutateXydriveFile: ({ fileId: string; operation: 'delete' | 'move'; destinationId?: string } & WithTabId);
+  mutateXydriveFile: ({ fileIds: string[]; operation: 'delete' | 'move'; destinationId?: string } & WithTabId);
   syncXydriveIndex: WithTabId | undefined;
   cancelXydriveSync: WithTabId | undefined;
-  openXydriveMedia: ({ fileId: string } & WithTabId);
+  renameXydriveFolder: ({ folderId: string; title: string } & WithTabId);
+  closeXydriveTextPreview: WithTabId | undefined;
+  openXydriveMedia: ({ fileId: string; shouldForward?: boolean } & WithTabId);
   selectXydriveSource: ({ channelId?: string } & WithTabId);
   mountXydriveChannel: ({ channelId: string } & WithTabId);
   unmountXydriveChannel: ({ channelId: string } & WithTabId);

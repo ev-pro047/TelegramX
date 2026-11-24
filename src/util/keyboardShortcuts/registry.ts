@@ -5,7 +5,7 @@ import { IS_MAC_OS } from '../browser/windowEnvironment';
 
 export type KeyboardShortcutId =
   'globalSearch' | 'quickChatPicker' | 'savedMessages' | 'archivedChats' | 'openSettings' | 'lockScreen'
-  | 'closeOrGoBack'
+  | 'closeOrGoBack' | 'xydriveSearch' | 'xydriveSelectAll'
   | 'previousChat' | 'nextChat' | 'openChatByNumber' | 'openFolderByNumber'
   | 'searchInChat' | 'focusMessageInput' | 'editLastMessage' | 'replyToPreviousMessage' | 'replyToNextMessage'
   | 'collapseRichInput' | 'copySelectedMessages' | 'deleteSelectedMessages' | 'copyFormats' | 'pauseVoiceRecording'
@@ -20,7 +20,7 @@ export type KeyboardShortcutId =
   | 'mediaEditorPlayback' | 'mediaEditorSeek' | 'mediaEditorFrameStep' | 'mediaEditorMute';
 
 export type KeyboardShortcutScope =
-  'global' | 'chatList' | 'chat' | 'composer' | 'messageSelection' | 'mediaViewer' | 'storyViewer' | 'mediaEditor';
+  'global' | 'chatList' | 'chat' | 'composer' | 'messageSelection' | 'mediaViewer' | 'storyViewer' | 'mediaEditor' | 'xydrive';
 
 export type KeyboardShortcutCondition = 'hasSelection' | 'noSelection' | 'isInputEmpty';
 
@@ -127,6 +127,19 @@ export const KEYBOARD_SHORTCUTS: Record<KeyboardShortcutId, KeyboardShortcut> = 
     scope: 'global',
     titleKey: 'ShortcutCloseOrGoBack',
     defaults: [{ combo: 'Escape' }],
+  },
+  xydriveSearch: {
+    section: 'general',
+    scope: 'xydrive',
+    titleKey: 'XydriveSearch',
+    isEditable: true,
+    defaults: [{ combo: 'Mod+Shift+F' }],
+  },
+  xydriveSelectAll: {
+    section: 'general',
+    scope: 'xydrive',
+    titleKey: 'XydriveSelectLoaded',
+    defaults: [{ combo: 'Mod+A' }],
   },
   previousChat: {
     section: 'chatList',
