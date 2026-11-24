@@ -296,7 +296,8 @@ const MediaViewer = ({
 
     // When landing in the Media Editor, the ghost is created on the Edit click and the viewer is
     // closed by the editor, so there is nothing to animate here
-    if (isGhostAnimation && !isOpen && prevItem && prevDimensions && !shouldLandInMediaEditor) {
+    if (isGhostAnimation && !isOpen && prevItem && prevDimensions && !shouldLandInMediaEditor
+      && prevOrigin !== MediaViewerOrigin.Xydrive) {
       beginHeavyAnimation(ANIMATION_DURATION + ANIMATION_END_DELAY);
       animateClosing(
         prevOrigin!, prevBestImageData!, prevDimensions, prevMessage, prevItem?.mediaIndex, prevSourceId,

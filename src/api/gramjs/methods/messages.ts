@@ -341,7 +341,7 @@ export async function fetchXydriveMediaMessage({ channel, messageId }: { channel
 
   try {
     const verified = channel ? await fetchVerifiedXydriveChannel(channel) : undefined;
-    if (channel && !verified) return { type: 'unavailable' as const };
+    if (channel && !verified) return { type: 'channelUnavailable' as const };
 
     const ids = [new GramJs.InputMessageID({ id: messageId })];
     const result = await invokeRequest(verified
@@ -358,7 +358,7 @@ export async function fetchXydriveMediaMessage({ channel, messageId }: { channel
       xydriveRetryAt = getServerTime() + err.seconds;
       return { type: 'wait' as const };
     }
-    if (isXydriveChannelUnavailable(err)) return { type: 'unavailable' as const };
+    if (channel && isXydriveChannelUnavailable(err)) return { type: 'channelUnavailable' as const };
     return undefined;
   }
 }

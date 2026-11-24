@@ -261,7 +261,8 @@ const XydriveExplorer = ({
                           disabled={Boolean(previewingId)}
                           onClick={() => onPreview(file)}
                         >
-                          <Icon name={file.previewKind === 'audio' ? 'play' : 'eye'} />
+                          <Icon name={previewingId === file.id ? 'reload-arrows'
+                            : file.previewKind === 'audio' ? 'play' : 'eye'} />
                         </button>
                       )}
                       <button

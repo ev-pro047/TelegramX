@@ -192,7 +192,14 @@ addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<v
   if (!isValid || result?.type !== 'message') {
     // The original file may have been removed or changed since this page loaded.
     // Drop stale metadata/thumbnail for a definite mismatch, not a transient network error.
-    if (currentTab.xydrive && (result?.type === 'unavailable' || result?.type === 'message')) {
+    if (currentTab.xydrive && result?.type === 'channelUnavailable') {
+      global = updateTabState(global, {
+        xydrive: {
+          ...currentTab.xydrive, files: [], scannedCount: 0, nextOffsetId: undefined,
+          requestId: undefined, status: 'error', error: 'unavailable',
+        },
+      }, tabId);
+    } else if (currentTab.xydrive && (result?.type === 'unavailable' || result?.type === 'message')) {
       global = updateTabState(global, {
         xydrive: { ...currentTab.xydrive, files: currentTab.xydrive.files.filter((item) => item.id !== fileId) },
       }, tabId);
@@ -209,11 +216,11 @@ addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<v
   // Insert only the explicitly opened message into the native message store, not the entire drive history.
   global = replaceMessages(global, [result.message]);
   setGlobal(global);
-  if (refreshedFile.previewKind === 'viewer') {
+  if (refreshedFile?.previewKind === 'viewer') {
     actions.openMediaViewer({
       chatId: sourceId, messageId: file.messageId, origin: MediaViewerOrigin.Xydrive, tabId,
     });
-  } else if (refreshedFile.previewKind === 'audio') {
+  } else if (refreshedFile?.previewKind === 'audio') {
     actions.openAudioPlayer({
       item: { type: 'message', chatId: sourceId, threadId: MAIN_THREAD_ID, messageId: file.messageId },
       source: { type: 'single' },
