@@ -415,7 +415,12 @@ export interface ActionPayloads {
   openXydrive: WithTabId | undefined;
   closeXydrive: WithTabId | undefined;
   loadXydrivePage: ({ shouldRefresh?: boolean } & WithTabId) | undefined;
-  createXydriveFolder: ({ title: string } & WithTabId);
+  createXydriveFolder: ({ title: string; parentId?: string } & WithTabId);
+  labelXydriveFile: ({ fileId: string; alias?: string; favorite?: boolean; pinned?: boolean; opened?: boolean } & WithTabId);
+  setXydriveFolderParent: ({ channelId: string; parentId?: string } & WithTabId);
+  mutateXydriveFile: ({ fileId: string; operation: 'delete' | 'move'; destinationId?: string } & WithTabId);
+  syncXydriveIndex: WithTabId | undefined;
+  cancelXydriveSync: WithTabId | undefined;
   openXydriveMedia: ({ fileId: string } & WithTabId);
   selectXydriveSource: ({ channelId?: string } & WithTabId);
   mountXydriveChannel: ({ channelId: string } & WithTabId);

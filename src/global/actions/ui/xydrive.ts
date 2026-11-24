@@ -1,6 +1,7 @@
 import type { ActionReturnType } from '../../types';
 import { MediaViewerOrigin } from '../../../types';
 
+import { getOrganization, setFolderParent, updateFileLabel } from '../../../lib/xydrive/organization';
 import { getXydriveMounts } from '../../../lib/xydrive/folders';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { addActionHandler } from '../../index';
@@ -33,6 +34,7 @@ addActionHandler('closeXydrive', (global, actions, payload): ActionReturnType =>
   }
   return updateTabState(global, {
     xydriveOwnerId: undefined,
+    xydriveIndex: undefined,
     xydriveSourceId: undefined,
     xydrive: undefined,
     xydriveMountRequest: undefined,
@@ -73,4 +75,39 @@ addActionHandler('unmountXydriveChannel', (global, actions, payload): ActionRetu
     }
   }
   return global;
+});
+
+
+addActionHandler('setXydriveFolderParent', (global, actions, payload): ActionReturnType => {
+  const { channelId, parentId, tabId = getCurrentTabId() } = payload;
+  const ownerId = global.currentUserId;
+  if (!ownerId || global.byTabId[tabId]?.xydriveOwnerId !== ownerId || global.passcode.isScreenLocked
+    || !selectSharedSettings(global).isXydriveEnabled) return undefined;
+  const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
+  const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
+  return replaceSettings(global, { xydriveOrganization: setFolderParent(org, folders, channelId, parentId) });
+});
+
+addActionHandler('labelXydriveFile', (global, actions, payload): ActionReturnType => {
+  const { fileId, alias, favorite, pinned, opened, tabId = getCurrentTabId() } = payload;
+  const ownerId = global.currentUserId;
+  const tab = global.byTabId[tabId];
+  if (!ownerId || tab?.xydriveOwnerId !== ownerId || global.passcode.isScreenLocked
+    || !selectSharedSettings(global).isXydriveEnabled) return undefined;
+  const file = tab.xydrive?.ownerId === ownerId && tab.xydrive.files.find(({ id }) => id === fileId);
+  if (!file) return undefined;
+  const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
+  return replaceSettings(global, { xydriveOrganization: updateFileLabel(org, file, {
+    ...(alias !== undefined && { alias: alias.trim().slice(0, 255) || undefined }),
+    ...(favorite !== undefined && { favorite }),
+    ...(pinned !== undefined && { pinned }),
+    ...(opened && { lastOpened: Date.now() }),
+  }) });
+});
+
+addActionHandler('cancelXydriveSync', (global, actions, payload): ActionReturnType => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const index = global.byTabId[tabId]?.xydriveIndex;
+  if (index?.status !== 'syncing' || index.ownerId !== global.currentUserId) return undefined;
+  return updateTabState(global, { xydriveIndex: { ...index, status: 'partial', requestId: undefined } }, tabId);
 });

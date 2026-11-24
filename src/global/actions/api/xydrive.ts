@@ -1,4 +1,6 @@
 import type { GlobalState } from '../../types';
+import type { XydriveFile, XydriveIndexSource } from '../../../lib/xydrive/types';
+import { getOrganization, setFolderParent, getFileLabel } from '../../../lib/xydrive/organization';
 import { MAIN_THREAD_ID } from '../../../api/types';
 import { MediaViewerOrigin } from '../../../types';
 
@@ -67,9 +69,10 @@ addActionHandler('mountXydriveChannel', async (global, actions, payload): Promis
 });
 
 addActionHandler('createXydriveFolder', async (global, actions, payload): Promise<void> => {
-  const { title, tabId = getCurrentTabId() } = payload;
+  const { title, parentId, tabId = getCurrentTabId() } = payload;
   const ownerId = global.currentUserId;
   const name = title.trim();
+  if (parentId && !getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId).some(({ id }) => id === parentId)) return;
   if (!ownerId || !isXydriveOpen(global, tabId, ownerId) || !name || name.length > 128
     || creatingForAccounts.has(ownerId)) return;
 
@@ -108,7 +111,10 @@ addActionHandler('createXydriveFolder', async (global, actions, payload): Promis
   if (channel) global = updateChat(global, channel.id, channel);
   if (verified) {
     const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
-    global = replaceSettings(global, { xydriveMounts: { ownerId, folders: upsertXydriveMount(folders, verified) } });
+    const nextFolders = upsertXydriveMount(folders, verified);
+    const organization = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
+    global = replaceSettings(global, { xydriveMounts: { ownerId, folders: nextFolders },
+      xydriveOrganization: setFolderParent(organization, nextFolders, verified.id, parentId) });
     if (isXydriveOpen(global, tabId, ownerId) && tab.xydriveSourceId === sourceAtStart) {
       global = updateTabState(global, {
         xydriveSourceId: verified.id, xydrive: undefined,
@@ -285,4 +291,105 @@ addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<v
       tabId,
     });
   }
+});
+
+
+const SYNC_PAGE_BUDGET = 100;
+const SYNC_FILE_LIMIT = 5000;
+
+function findDriveFile(global: GlobalState, tabId: number, ownerId: string, id: string): XydriveFile | undefined {
+  const tab = global.byTabId[tabId];
+  const current = tab.xydrive?.ownerId === ownerId ? tab.xydrive.files.find((file) => file.id === id) : undefined;
+  if (current) return current;
+  if (tab.xydriveIndex?.ownerId !== ownerId) return undefined;
+  const file = Object.values(tab.xydriveIndex.sources).flatMap((source) => source.files).find((item) => item.id === id);
+  if (!file) return undefined;
+  return file.chatId === ownerId || getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId)
+    .some((folder) => folder.id === file.chatId) ? file : undefined;
+}
+
+addActionHandler('mutateXydriveFile', async (global, actions, payload): Promise<void> => {
+  const { fileId, operation, destinationId, tabId = getCurrentTabId() } = payload;
+  const ownerId = global.currentUserId;
+  if (!ownerId || !isXydriveOpen(global, tabId, ownerId) || global.byTabId[tabId].xydriveMutation?.status === 'working') return;
+  const file = findDriveFile(global, tabId, ownerId, fileId);
+  if (!file) return;
+  const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
+  const source = folders.find(({ id }) => id === file.chatId);
+  const destination = folders.find(({ id }) => id === destinationId);
+  if ((file.chatId !== ownerId && !source) || (destinationId && !destination)
+    || (operation === 'move' && file.chatId === (destinationId || ownerId))) return;
+  const id = ++nextRequestId;
+  setGlobal(updateTabState(global, { xydriveMutation: { id, fileId, status: 'working' } }, tabId));
+  const result = await callApi('mutateXydriveFile', {
+    ownerId, file, operation, source: source && buildXydriveChannel(source),
+    destination: destination && buildXydriveChannel(destination),
+  }).catch(() => undefined);
+  global = getGlobal();
+  if (global.currentUserId !== ownerId || global.byTabId[tabId]?.xydriveMutation?.id !== id) return;
+  const tab = global.byTabId[tabId];
+  const status = result?.status || 'error';
+  if (status === 'complete') {
+    const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
+    const label = getFileLabel(org, file);
+    const labels = { ...org.labels };
+    delete labels[file.id];
+    if (label && result?.copiedFile) labels[result.copiedFile.id] = { ...label, mediaId: result.copiedFile.mediaId };
+    global = replaceSettings(global, { xydriveOrganization: { ...org, labels } });
+    if (tab.xydrive?.sourceId === file.chatId) {
+      global = updateTabState(global, { xydrive: { ...tab.xydrive,
+        files: tab.xydrive.files.filter((item) => item.id !== fileId) } }, tabId);
+    }
+  }
+  // Any mutation can change history; invalidate the scan rather than claiming its totals remain exact.
+  setGlobal(updateTabState(global, { xydriveMutation: { id, fileId, status }, xydriveIndex: undefined }, tabId));
+  if (isXydriveOpen(global, tabId, ownerId)) actions.loadXydrivePage({ shouldRefresh: true, tabId });
+});
+
+addActionHandler('syncXydriveIndex', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const ownerId = global.currentUserId;
+  if (!ownerId || !isXydriveOpen(global, tabId, ownerId) || global.byTabId[tabId].xydriveIndex?.status === 'syncing') return;
+  const requestId = ++nextRequestId;
+  const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
+  const sources: Record<string, XydriveIndexSource> = {};
+  let remaining = SYNC_PAGE_BUDGET;
+  let count = 0;
+  let failed = false;
+  const stillActive = () => {
+    const latest = getGlobal();
+    return isXydriveOpen(latest, tabId, ownerId) && latest.byTabId[tabId].xydriveIndex?.requestId === requestId;
+  };
+  const publish = (status: 'syncing' | 'partial' | 'ready' | 'error') => {
+    if (!stillActive()) return;
+    setGlobal(updateTabState(getGlobal(), { xydriveIndex: { ownerId, sources: { ...sources }, status, requestId } }, tabId));
+  };
+  setGlobal(updateTabState(global, { xydriveIndex: { ownerId, sources: {}, status: 'syncing', requestId } }, tabId));
+  for (const folder of [undefined, ...folders]) {
+    if (!stillActive() || remaining <= 0 || count >= SYNC_FILE_LIMIT || failed) break;
+    const sourceId = folder?.id || ownerId;
+    let offsetId: number | undefined;
+    let files: XydriveFile[] = [];
+    let complete = false;
+    do {
+      if (!stillActive()) return;
+      remaining--;
+      const result = await callApi('fetchXydriveHistory', { offsetId, channel: folder && buildXydriveChannel(folder) })
+        .catch(() => undefined);
+      if (!stillActive()) return;
+      if (result?.type !== 'page') { failed = true; break; }
+      const next = result.messages.map((message) => getXydriveMediaFile(message, sourceId)).filter(Boolean);
+      const merged = mergeXydriveFiles(files, next);
+      count += merged.length - files.length;
+      files = merged;
+      complete = result.nextOffsetId === undefined;
+      if (!complete && result.nextOffsetId === offsetId) { failed = true; break; }
+      offsetId = result.nextOffsetId;
+      sources[sourceId] = { files, complete, checkedAt: Date.now() };
+      publish('syncing');
+    } while (!complete && remaining > 0 && count < SYNC_FILE_LIMIT);
+  }
+  if (!stillActive()) return;
+  const complete = [ownerId, ...folders.map(({ id }) => id)].every((id) => sources[id]?.complete);
+  publish(complete ? 'ready' : failed && !Object.keys(sources).length ? 'error' : 'partial');
 });

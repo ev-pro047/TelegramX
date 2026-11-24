@@ -62,6 +62,8 @@ import { fetchFile } from '../../../util/files';
 import { compact, omit, split } from '../../../util/iteratees';
 import { getMessageKey, getMtpEphemeralMessageId } from '../../../util/keys/messageKey';
 import { getServerTime } from '../../../util/serverTime';
+import type { XydriveFile } from '../../../lib/xydrive/types';
+import { getXydriveFile } from '../../../lib/xydrive/fileMetadata';
 import { isXydriveChannelEligible } from '../../../lib/xydrive/folders';
 import { getXydriveNextOffset } from '../../../lib/xydrive/pagination';
 import { interpolateArray } from '../../../util/waveform';
@@ -403,6 +405,82 @@ export async function fetchXydriveMediaMessage({ channel, messageId }: { channel
     }
     if (channel && isXydriveChannelUnavailable(err)) return { type: 'channelUnavailable' as const };
     return undefined;
+  }
+}
+
+// Only operate on media that still matches the selected drive item, within the current account.
+export async function mutateXydriveFile({
+  ownerId, file, source, destination, operation,
+}: {
+  ownerId: string; file: XydriveFile; source?: ApiChat; destination?: ApiChat; operation: 'delete' | 'move';
+}) {
+  if (!isXydriveCurrentAccount(ownerId) || file.chatId !== (source?.id || ownerId)
+    || (operation === 'move' && file.chatId === (destination?.id || ownerId))) return { status: 'unavailable' as const };
+  if (xydriveRetryAt > getServerTime()) return { status: 'wait' as const };
+
+  let copyConfirmed = false;
+  let copyStarted = false;
+  let deleteStarted = false;
+  let copiedFile: XydriveFile | undefined;
+  const matches = (current?: XydriveFile) => Boolean(current && current.id === file.id
+    && current.mediaId === file.mediaId && current.mediaType === file.mediaType);
+  try {
+    const original = await fetchXydriveMediaMessage({ channel: source, messageId: file.messageId });
+    if (original?.type === 'wait') return { status: 'wait' as const };
+    if (original?.type !== 'message' || !matches(getXydriveFile(original.message, file.chatId))
+      || !isXydriveCurrentAccount(ownerId)) return { status: 'unavailable' as const };
+
+    if (operation === 'move') {
+      // Without a stable media identifier we cannot prove that the destination copy is the same file.
+      if (!file.mediaId) return { status: 'unavailable' as const };
+      const to = destination ? await fetchVerifiedXydriveChannel(destination) : undefined;
+      if ((destination && !to) || !isXydriveCurrentAccount(ownerId)) return { status: 'unavailable' as const };
+      const from = source ? await fetchVerifiedXydriveChannel(source) : undefined;
+      if ((source && !from) || !isXydriveCurrentAccount(ownerId)) return { status: 'unavailable' as const };
+      const randomId = generateRandomBigInt();
+      copyStarted = true;
+      const result = await invokeRequest(new GramJs.messages.ForwardMessages({
+        fromPeer: from ? buildInputPeer(from.id, from.accessHash) : new GramJs.InputPeerSelf(),
+        toPeer: to ? buildInputPeer(to.id, to.accessHash) : new GramJs.InputPeerSelf(),
+        id: [file.messageId],
+        randomId: [randomId],
+      }), { shouldThrow: true });
+      const update = result && 'updates' in result && result.updates.find((item): item is GramJs.UpdateMessageID =>
+        item instanceof GramJs.UpdateMessageID && item.randomId.toString() === randomId.toString());
+      if (!update || !isXydriveCurrentAccount(ownerId)) return { status: 'copyUnknown' as const };
+      const copied = await fetchXydriveMediaMessage({ channel: destination, messageId: update.id });
+      if (copied?.type !== 'message') return { status: 'copyUnknown' as const };
+      copiedFile = getXydriveFile(copied.message, destination?.id || ownerId);
+      if (!copiedFile || copiedFile.mediaId !== file.mediaId || copiedFile.mediaType !== file.mediaType
+        || (file.size !== undefined && copiedFile.size !== file.size)) return { status: 'copyUnknown' as const };
+      copyConfirmed = true;
+    }
+
+    // Re-fetch the source immediately before deletion. Never delete on an ambiguous copy.
+    const current = await fetchXydriveMediaMessage({ channel: source, messageId: file.messageId });
+    if (current?.type !== 'message' || !matches(getXydriveFile(current.message, file.chatId))
+      || !isXydriveCurrentAccount(ownerId)) return { status: copyConfirmed ? 'copied' as const : 'unavailable' as const, copiedFile };
+    const verified = source ? await fetchVerifiedXydriveChannel(source) : undefined;
+    if ((source && !verified) || !isXydriveCurrentAccount(ownerId)) {
+      return { status: copyConfirmed ? 'copied' as const : 'unavailable' as const, copiedFile };
+    }
+    deleteStarted = true;
+    const affected = await invokeRequest(verified
+      ? new GramJs.channels.DeleteMessages({
+        channel: buildInputChannel(verified.id, verified.accessHash), id: [file.messageId],
+      })
+      : new GramJs.messages.DeleteMessages({ id: [file.messageId], revoke: true }), { shouldThrow: true });
+    if (!affected) return { status: 'deleteUnknown' as const, copiedFile };
+    if (verified) processAffectedHistory(verified.chat, affected);
+    sendApiUpdate({ '@type': 'deleteMessages', ids: [file.messageId], ...(verified && { chatId: verified.id }) });
+    return { status: 'complete' as const, copiedFile };
+  } catch (error) {
+    if (error instanceof FloodWaitError || error instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + error.seconds;
+      if (!copyStarted && !deleteStarted) return { status: 'wait' as const };
+    }
+    return { status: deleteStarted ? 'deleteUnknown' as const : copyConfirmed ? 'copied' as const
+      : copyStarted ? 'copyUnknown' as const : 'error' as const, copiedFile };
   }
 }
 

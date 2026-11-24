@@ -81,7 +81,7 @@ import type {
   WalletBackupError,
 } from '../../api/types';
 import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
-import type { XydriveState } from '../../lib/xydrive/types';
+import type { XydriveIndex, XydriveMutationStatus, XydriveState } from '../../lib/xydrive/types';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type {
@@ -234,6 +234,8 @@ export type TabState = {
   xydriveMediaRequest?: { id: number; fileId: string };
   xydriveMediaError?: 'wait' | 'unavailable';
   xydrive?: XydriveState;
+  xydriveIndex?: XydriveIndex;
+  xydriveMutation?: { id: number; fileId: string; status: XydriveMutationStatus };
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;
   uiReadyState: 0 | 1 | 2;

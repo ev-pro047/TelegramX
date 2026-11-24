@@ -36,3 +36,33 @@ export type XydriveState = {
   requestId?: number;
   error?: 'wait' | 'generic' | 'unavailable';
 };
+
+export type XydriveFileLabel = {
+  mediaId?: string;
+  alias?: string;
+  favorite?: boolean;
+  pinned?: boolean;
+  lastOpened?: number;
+};
+
+export type XydriveOrganization = {
+  ownerId: string;
+  parents: Record<string, string>;
+  labels: Record<string, XydriveFileLabel>;
+};
+
+export type XydriveIndexSource = {
+  files: XydriveFile[];
+  complete: boolean;
+  checkedAt: number;
+};
+
+export type XydriveIndex = {
+  ownerId: string;
+  sources: Record<string, XydriveIndexSource>;
+  status: 'idle' | 'syncing' | 'partial' | 'ready' | 'error';
+  requestId?: number;
+};
+
+export type XydriveMutationStatus = 'working' | 'complete' | 'wait' | 'unavailable' | 'error'
+  | 'copied' | 'copyUnknown' | 'deleteUnknown';
