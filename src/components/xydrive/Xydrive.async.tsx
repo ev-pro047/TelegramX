@@ -89,6 +89,7 @@ const XydriveAsync = ({
   return Xydrive ? (
     <Xydrive
       isOpen={isOpen}
+      ownerId={isOpen ? currentUserId : undefined}
       drive={isOpen ? drive : undefined}
       sourceId={isOpen ? sourceId : undefined}
       folders={isOpen ? folders : undefined}

@@ -6,7 +6,7 @@ import { getActions, withGlobal } from '../../global';
 import type { GlobalState } from '../../global/types';
 
 import { IS_TAURI } from '../../util/browser/globalEnvironment';
-import { IS_MAC_OS, PLATFORM_ENV } from '../../util/browser/windowEnvironment';
+import { IS_MAC_OS } from '../../util/browser/windowEnvironment';
 
 import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import useHistoryBack from '../../hooks/useHistoryBack';
@@ -27,24 +27,11 @@ type StateProps = {
 const Auth = ({
   authState,
 }: StateProps) => {
-  const {
-    returnToAuthPhoneNumber, goToAuthQrCode,
-  } = getActions();
-
-  const isMobile = PLATFORM_ENV === 'iOS' || PLATFORM_ENV === 'Android';
-
-  const handleChangeAuthorizationMethod = () => {
-    if (!isMobile) {
-      goToAuthQrCode();
-    } else {
-      returnToAuthPhoneNumber();
-    }
-  };
+  const { returnToAuthPhoneNumber } = getActions();
 
   useHistoryBack({
-    isActive: (!isMobile && authState === 'authorizationStateWaitPhoneNumber')
-      || (isMobile && authState === 'authorizationStateWaitQrCode'),
-    onBack: handleChangeAuthorizationMethod,
+    isActive: authState === 'authorizationStateWaitQrCode',
+    onBack: () => returnToAuthPhoneNumber(),
   });
 
   // For animation purposes
@@ -66,7 +53,7 @@ const Auth = ({
       case 'authorizationStateWaitQrCode':
         return <AuthQrCode />;
       default:
-        return isMobile ? <AuthPhoneNumber /> : <AuthQrCode />;
+        return <AuthPhoneNumber />;
     }
   }
 
@@ -83,7 +70,7 @@ const Auth = ({
       case 'authorizationStateWaitQrCode':
         return 4;
       default:
-        return isMobile ? 3 : 4;
+        return 3;
     }
   }
 

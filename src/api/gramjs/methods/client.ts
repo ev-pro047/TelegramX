@@ -96,11 +96,16 @@ const ABORT_CONTROLLERS = new Map<string, AbortController>();
 let client: TelegramClient;
 let currentUserId: string | undefined;
 
+export function isXydriveCurrentAccount(ownerId: string) {
+  return currentUserId === ownerId;
+}
+
 export function setLanguageCode({ langCode }: { langCode: string }) {
   return client.setLanguageCode(langCode);
 }
 
 export async function init(initialArgs: ApiInitialArgs, onConnected?: NoneToVoidFunction) {
+  currentUserId = undefined;
   if (DEBUG) {
     // eslint-disable-next-line no-console
     console.log('>>> START INIT API');
@@ -156,7 +161,7 @@ export async function init(initialArgs: ApiInitialArgs, onConnected?: NoneToVoid
         onPasskeyOption,
         qrCode: onRequestQrCode,
         onError: onAuthError,
-        initialMethod: platform === 'iOS' || platform === 'Android' ? 'phoneNumber' : 'qrCode',
+        initialMethod: 'phoneNumber',
         shouldThrowIfUnauthorized: Object.values(sessionData?.keys || {}).length > 0,
         webAuthToken,
         webAuthUserId,
@@ -206,6 +211,7 @@ export function setIsPremium({ isPremium }: { isPremium: boolean }) {
 
 const LOG_OUT_TIMEOUT = 2500;
 export async function destroy(noLogOut = false, noClearLocalDb = false) {
+  currentUserId = undefined;
   if (!noLogOut && client.isConnected()) {
     await Promise.race([
       invokeRequest(new GramJs.auth.LogOut()),

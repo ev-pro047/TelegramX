@@ -4814,3 +4814,35 @@
 "XydriveLoadingOlder" = "Loading older messages…";
 "XydrivePreview" = "Open media";
 "XydriveMediaUnavailable" = "This media is unavailable or has changed. Return to its Telegram message or reload the folder.";
+
+"XydriveTransfers" = "Transfer Center";
+"XydriveUpload" = "Upload files";
+"XydriveDrop" = "Drop files here or browse";
+"XydriveTransferAll" = "All";
+"XydriveTransferUploads" = "Uploads";
+"XydriveTransferDownloads" = "Downloads";
+"XydriveTransferHistory" = "History";
+"XydriveTransferEmpty" = "No transfers in this session";
+"XydriveTransferQueued" = "Queued";
+"XydriveTransferActive" = "Transferring";
+"XydriveTransferCommitting" = "Saving to Telegram";
+"XydriveTransferComplete" = "Uploaded";
+"XydriveTransferHandedOff" = "Handed to browser";
+"XydriveTransferFailed" = "Transfer failed";
+"XydriveTransferCanceled" = "Canceled";
+"XydriveTransferWait" = "Telegram asked you to wait; retry later";
+"XydriveTransferUnavailable" = "File or folder unavailable";
+"XydriveTransferUnknown" = "Upload result unknown; refresh before uploading again";
+"XydriveTransferTooLarge" = "File exceeds your Telegram upload limit";
+"XydriveTransferEmptyFile" = "Empty files are not supported";
+"XydriveTransferBusy" = "This file is already downloading";
+"XydriveTransferCancel" = "Cancel";
+"XydriveTransferRetry" = "Retry";
+"XydriveTransferClear" = "Clear history";
+"XydriveTransferDownload" = "Download";
+"XydriveTransferDownloadSelected" = "Download selected";
+"XydriveTransferDuplicate" = "A matching filename is already loaded in this folder. Telegram allows both copies. Continue?";
+"XydriveTransferLimit" = "Up to 100 queued or active transfers per tab session.";
+
+"XydriveTransferQueueFull" = "Transfer queue is full. Wait for a transfer to finish.";
+"XydriveTransferCancelAll" = "Cancel all";

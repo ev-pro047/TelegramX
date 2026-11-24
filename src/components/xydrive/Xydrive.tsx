@@ -13,11 +13,13 @@ import Loading from '../ui/Loading';
 import Modal from '../ui/Modal';
 import AudioPlayer from '../middle/panes/AudioPlayer';
 import XydriveExplorer from './XydriveExplorer';
+import XydriveTransfers from './XydriveTransfers';
 
 import styles from './Xydrive.module.scss';
 
 type OwnProps = {
   isOpen: boolean;
+  ownerId?: string;
   drive?: XydriveState;
   sourceId?: string;
   folders?: XydriveMount[];
@@ -40,7 +42,7 @@ type OwnProps = {
 const EMPTY_FILES: XydriveFile[] = [];
 
 const Xydrive = ({
-  isOpen, drive, sourceId, folders, chats, mountingId, mountError,
+  isOpen, ownerId, drive, sourceId, folders, chats, mountingId, mountError,
   onClose, onOpenSaved, onLoadMore, onOpenMessage, onSelectSource, onMount, onUnmount,
   onPreview, previewingId, mediaError, isViewerOpen,
 }: OwnProps) => {
@@ -159,6 +161,7 @@ const Xydrive = ({
             </Button>
           )}
         </div>
+        {isOpen && <XydriveTransfers key={`${ownerId}:${sourceId || 'root'}`} ownerId={ownerId} files={files} />}
         {isOpen && (
           <XydriveExplorer
             key={sourceId || 'root'}
