@@ -3,13 +3,14 @@ import {
 } from '../../lib/teact/teact';
 
 import type { XydriveDirection, XydriveFilter, XydriveSort } from '../../lib/xydrive/explorer';
-import type { XydriveCategory, XydriveFile } from '../../lib/xydrive/types';
+import type { XydriveCategory, XydriveFile, XydriveMount, XydriveMutationStatus, XydriveOrganization } from '../../lib/xydrive/types';
 import type { IconName } from '../../types/icons';
 import type { RegularLangKey } from '../../types/language';
 
 import {
   EMPTY_XYDRIVE_SELECTION, queryXydriveFiles, restrictXydriveSelection, selectXydriveFile,
 } from '../../lib/xydrive/explorer';
+import { getFileLabel, getFolderChain } from '../../lib/xydrive/organization';
 import { enqueueXydriveDownload } from '../../lib/xydrive/transfers';
 import buildClassName from '../../util/buildClassName';
 import { formatFileSize } from '../../util/text/textFormat';
@@ -33,6 +34,12 @@ type OwnProps = {
   onOpenMessage: (file: XydriveFile) => void;
   onPreview: (file: XydriveFile) => void;
   previewingId?: string;
+  organization: XydriveOrganization;
+  folders: XydriveMount[];
+  ownerId?: string;
+  onLabel: (fileId: string, patch: { alias?: string; favorite?: boolean; pinned?: boolean }) => void;
+  onMutate: (fileId: string, operation: 'delete' | 'move', destinationId?: string) => void;
+  mutationStatus?: XydriveMutationStatus;
 };
 
 const CATEGORY_LABELS: Record<XydriveCategory, RegularLangKey> = {
@@ -63,6 +70,7 @@ const SORT_OPTIONS: { key: XydriveSort; label: RegularLangKey }[] = [
 
 const XydriveExplorer = ({
   files, isComplete, isLoading, onOpenMessage, onPreview, previewingId,
+  organization, folders, ownerId, onLabel, onMutate, mutationStatus,
 }: OwnProps) => {
   const lang = useLang();
   const [query, setQuery] = useState('');
@@ -73,14 +81,23 @@ const XydriveExplorer = ({
   const [selection, setSelection] = useState(EMPTY_XYDRIVE_SELECTION);
   const [detailsId, setDetailsId] = useState<string | undefined>(undefined);
   const [menuId, setMenuId] = useState<string | undefined>(undefined);
+  const [edit, setEdit] = useState<{ file: XydriveFile; mode: 'rename' | 'delete' | 'move' } | undefined>();
+  const [value, setValue] = useState('');
+  const busy = mutationStatus === 'working';
+  function startEdit(file: XydriveFile, mode: 'rename' | 'delete' | 'move') {
+    setEdit({ file, mode });
+    setValue(mode === 'rename' ? (getFileLabel(organization, file)?.alias || file.name) : '');
+    setMenuId(undefined);
+  }
   const listRef = useRef<HTMLUListElement>();
   // Undefined observer root uses the viewport; ancestor scroll clipping is respected.
   const viewportRef = useRef<HTMLDivElement>();
   const { observe } = useIntersectionObserver({ rootRef: viewportRef });
 
   const visibleFiles = useMemo(
-    () => queryXydriveFiles(files, query, category, sort, direction),
-    [files, query, category, sort, direction],
+    () => queryXydriveFiles(files.map((file) => ({ ...file, name: getFileLabel(organization, file)?.alias || file.name })),
+      query, category, sort, direction).sort((a, b) => Number(Boolean(getFileLabel(organization, b)?.pinned)) - Number(Boolean(getFileLabel(organization, a)?.pinned))),
+    [files, query, category, sort, direction, organization],
   );
   const visibleIds = useMemo(() => visibleFiles.map(({ id }) => id), [visibleFiles]);
   const visibleSelection = useMemo(
@@ -187,6 +204,39 @@ const XydriveExplorer = ({
           </div>
         </div>
       </div>
+      {edit && (
+        <section className={styles.editPanel} aria-label={lang(edit.mode === 'rename' ? 'XydriveRename' : edit.mode === 'move' ? 'XydriveMove' : 'XydriveDelete')}>
+          <strong>{lang(edit.mode === 'rename' ? 'XydriveRename' : edit.mode === 'move' ? 'XydriveMove' : 'XydriveDelete')}: {edit.file.name}</strong>
+          <p className={styles.scope}>{lang(edit.mode === 'rename' ? 'XydriveAliasDesc' : edit.mode === 'move' ? 'XydriveMoveDesc' : 'XydriveDeleteDesc')}</p>
+          {edit.mode === 'rename' && <input className={styles.editInput} aria-label={lang('XydriveRename')} value={value}
+            maxLength={255} onInput={(event) => setValue(event.currentTarget.value)} />}
+          {edit.mode === 'move' && <select className={styles.editInput} aria-label={lang('XydriveDestination')} value={value}
+            onChange={(event) => setValue(event.currentTarget.value)}>
+            <option value="">{lang(edit.file.chatId === ownerId ? 'XydriveChooseFolder' : 'XydriveRoot')}</option>
+            {folders.filter(({ id }) => id !== edit.file.chatId).map((folder) => (
+              <option key={folder.id} value={folder.id}>{getFolderChain(organization, folders, folder.id).map(({ title }) => title).join(' / ')}</option>
+            ))}
+          </select>}
+          <div className={styles.selectionActions}>
+            <Button size="smaller" color="translucent" onClick={() => setEdit(undefined)}>{lang('Close')}</Button>
+            <Button size="smaller" color={edit.mode === 'delete' ? 'danger' : 'primary'}
+              disabled={busy || (edit.mode === 'move' && (value || ownerId) === edit.file.chatId)}
+              onClick={() => {
+                if (edit.mode === 'rename') onLabel(edit.file.id, { alias: value });
+                else onMutate(edit.file.id, edit.mode, value || undefined);
+                setEdit(undefined);
+              }}>{lang(edit.mode === 'rename' ? 'XydriveSaveName' : edit.mode === 'move' ? 'XydriveMove' : 'XydriveDelete')}</Button>
+          </div>
+        </section>
+      )}
+      {mutationStatus && (
+        <p className={styles.scope} role="status">{lang(mutationStatus === 'working' ? 'XydriveMutationWorking'
+          : mutationStatus === 'complete' ? 'XydriveMutationComplete'
+          : mutationStatus === 'copied' ? 'XydriveMutationCopied'
+          : mutationStatus === 'copyUnknown' ? 'XydriveMutationCopyUnknown'
+          : mutationStatus === 'deleteUnknown' ? 'XydriveMutationDeleteUnknown'
+          : mutationStatus === 'wait' ? 'XydriveWait' : 'XydriveMutationError')}</p>
+      )}
       <p className={styles.scope} aria-live="polite">
         {lang(isComplete ? 'XydriveCompleteScope' : 'XydrivePartialScope')}
       </p>
@@ -254,6 +304,12 @@ const XydriveExplorer = ({
                       <XydriveThumbnail file={file} icon={CATEGORY_ICONS[file.category]} observe={observe} />
                       <span className={styles.fileText}>
                         <span className={styles.name} dir="auto">{file.name}</span>
+                        {(getFileLabel(organization, file)?.favorite || getFileLabel(organization, file)?.pinned) && (
+                          <span className={styles.labelMarks}>
+                            {getFileLabel(organization, file)?.favorite && <Icon name="star-regular-filled" />}
+                            {getFileLabel(organization, file)?.pinned && <Icon name="pin" />}
+                          </span>
+                        )}
                         <span className={styles.meta}>
                           {lang(CATEGORY_LABELS[file.category])} · {file.size === undefined
                             ? lang('XydriveUnknownSize') : formatFileSize(lang, file.size)}
@@ -314,6 +370,15 @@ const XydriveExplorer = ({
                               {lang('XydriveTransferDownload')}
                             </MenuItem>
                             <MenuItem icon="info" onClick={() => setDetailsId(file.id)}>{lang('XydriveDetails')}</MenuItem>
+                            <MenuItem icon="edit" onClick={() => startEdit(file, 'rename')}>{lang('XydriveRename')}</MenuItem>
+                            <MenuItem icon="star-outline" onClick={() => onLabel(file.id, { favorite: !getFileLabel(organization, file)?.favorite })}>
+                              {lang(getFileLabel(organization, file)?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}
+                            </MenuItem>
+                            <MenuItem icon="pin" onClick={() => onLabel(file.id, { pinned: !getFileLabel(organization, file)?.pinned })}>
+                              {lang(getFileLabel(organization, file)?.pinned ? 'XydriveUnpin' : 'XydrivePin')}
+                            </MenuItem>
+                            <MenuItem icon="folder" disabled={busy} onClick={() => startEdit(file, 'move')}>{lang('XydriveMove')}</MenuItem>
+                            <MenuItem disabled={busy} onClick={() => startEdit(file, 'delete')}>{lang('XydriveDelete')}</MenuItem>
                             <MenuItem icon="check" onClick={() => toggleFile(file.id)}>
                               {lang(isSelected ? 'XydriveDeselectFile' : 'XydriveSelectFile')}
                             </MenuItem>
@@ -345,6 +410,11 @@ const XydriveExplorer = ({
             </div>
             <Icon name={CATEGORY_ICONS[details.category]} className={styles.detailIcon} />
             <strong className={styles.detailName} dir="auto">{details.name}</strong>
+            <div className={styles.selectionActions}>
+              <Button size="tiny" color="translucent" onClick={() => startEdit(details, 'rename')}>{lang('XydriveRename')}</Button>
+              <Button size="tiny" color="translucent" onClick={() => onLabel(details.id, { favorite: !getFileLabel(organization, details)?.favorite })}>{lang(getFileLabel(organization, details)?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}</Button>
+              <Button size="tiny" color="translucent" onClick={() => onLabel(details.id, { pinned: !getFileLabel(organization, details)?.pinned })}>{lang(getFileLabel(organization, details)?.pinned ? 'XydriveUnpin' : 'XydrivePin')}</Button>
+            </div>
             <dl>
               <dt>{lang('XydriveSortType')}</dt>
               <dd>{lang(CATEGORY_LABELS[details.category])}</dd>

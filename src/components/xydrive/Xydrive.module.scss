@@ -369,3 +369,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.sectionTabs { display: flex; gap: 0.25rem; overflow-x: auto; min-width: 0; padding: 0.25rem; border: 1px solid var(--color-borders); border-radius: 1rem; background-color: var(--color-background); }
+.tab { flex-shrink: 0; padding: 0.5rem 0.75rem; border: 0; border-radius: 0.75rem; color: var(--color-text); font: inherit; font-size: 0.875rem; background: transparent; cursor: pointer; }
+.tab.navActive { color: var(--color-primary); background-color: var(--color-background-selected); }
+@media (max-width: 820px) { .sectionTabs { display: none; } .dock { overflow-x: auto; } .dockButton { min-width: 2.25rem; } }

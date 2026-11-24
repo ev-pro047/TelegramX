@@ -94,8 +94,9 @@ addActionHandler('labelXydriveFile', (global, actions, payload): ActionReturnTyp
   const tab = global.byTabId[tabId];
   if (!ownerId || tab?.xydriveOwnerId !== ownerId || global.passcode.isScreenLocked
     || !selectSharedSettings(global).isXydriveEnabled) return undefined;
-  const file = tab.xydrive?.ownerId === ownerId && tab.xydrive.files.find(({ id }) => id === fileId);
-  if (!file) return undefined;
+  const file = (tab.xydrive?.ownerId === ownerId ? tab.xydrive.files.find(({ id }) => id === fileId) : undefined)
+    || (tab.xydriveIndex?.ownerId === ownerId ? Object.values(tab.xydriveIndex.sources).flatMap((source) => source.files).find(({ id }) => id === fileId) : undefined);
+  if (!file || (file.chatId !== ownerId && !getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId).some(({ id }) => id === file.chatId))) return undefined;
   const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
   return replaceSettings(global, { xydriveOrganization: updateFileLabel(org, file, {
     ...(alias !== undefined && { alias: alias.trim().slice(0, 255) || undefined }),

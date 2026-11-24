@@ -117,21 +117,26 @@ function finish(job: Job, status: TransferStatus) {
   notify();
 }
 
-function getDestination() {
+function getDestination(remote?: XydriveFile) {
   const global = getGlobal();
   const ownerId = global.currentUserId;
   const tabId = getCurrentTabId();
   const tab = selectTabState(global, tabId);
   if (!ownerId || tab?.xydriveOwnerId !== ownerId || global.passcode.isScreenLocked
     || !selectSharedSettings(global).isXydriveEnabled) return undefined;
-  const sourceId = tab.xydriveSourceId || ownerId;
+  const sourceId = remote?.chatId || tab.xydriveSourceId || ownerId;
+  if (remote) {
+    const known = (tab.xydrive?.ownerId === ownerId && tab.xydrive.files.some(({ id, mediaId }) => id === remote.id && mediaId === remote.mediaId))
+      || (tab.xydriveIndex?.ownerId === ownerId && tab.xydriveIndex.sources[sourceId]?.files.some(({ id, mediaId }) => id === remote.id && mediaId === remote.mediaId));
+    if (!known || (sourceId !== ownerId && !getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId).some(({ id }) => id === sourceId))) return undefined;
+  }
   const destinationName = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId)
     .find(({ id }) => id === sourceId)?.title;
   return { ownerId, sourceId, destinationName, tabId };
 }
 
 function enqueue(direction: 'upload' | 'download', name: string, size: number | undefined, file?: File, remote?: XydriveFile) {
-  const destination = getDestination();
+  const destination = getDestination(remote);
   if (!destination) return;
   if (Array.from(jobs.values()).filter(({ row }) => isActiveTransfer(row.status)).length >= MAX_PENDING) {
     getActions().showNotification({ message: { key: 'XydriveTransferQueueFull' } });

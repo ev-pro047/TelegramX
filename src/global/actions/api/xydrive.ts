@@ -213,10 +213,10 @@ addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<v
   const ownerId = global.currentUserId;
   if (!ownerId || !isXydriveOpen(global, tabId, ownerId)) return;
   const tab = global.byTabId[tabId];
-  const sourceId = tab.xydriveSourceId || ownerId;
-  if (tab.xydrive?.ownerId !== ownerId || tab.xydrive.sourceId !== sourceId || tab.xydriveMediaRequest) return;
-  const file = tab.xydrive.files.find(({ id }) => id === fileId);
+  if (tab.xydriveMediaRequest) return;
+  const file = findDriveFile(global, tabId, ownerId, fileId);
   if (!file?.previewKind) return;
+  const sourceId = file.chatId;
 
   const folder = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId).find(({ id }) => id === sourceId);
   if (sourceId !== ownerId && !folder) return;
@@ -240,8 +240,8 @@ addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<v
   global = getGlobal();
   if (!isXydriveOpen(global, tabId, ownerId)) return;
   const currentTab = global.byTabId[tabId];
-  if (currentTab.xydriveMediaRequest?.id !== id || (currentTab.xydriveSourceId || ownerId) !== sourceId) return;
-  const currentFile = currentTab.xydrive?.files.find((item) => item.id === fileId);
+  if (currentTab.xydriveMediaRequest?.id !== id) return;
+  const currentFile = findDriveFile(global, tabId, ownerId, fileId);
   const isMounted = sourceId === ownerId || getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId)
     .some((item) => item.id === sourceId);
   const refreshedFile = result?.type === 'message' ? getXydriveMediaFile(result.message, sourceId) : undefined;
@@ -256,19 +256,19 @@ addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<v
   if (!isValid || result?.type !== 'message') {
     // The original file may have been removed or changed since this page loaded.
     // Drop stale metadata/thumbnail for a definite mismatch, not a transient network error.
-    if (currentTab.xydrive && result?.type === 'channelUnavailable') {
+    if (currentTab.xydrive?.sourceId === sourceId && result?.type === 'channelUnavailable') {
       global = updateTabState(global, {
         xydrive: {
           ...currentTab.xydrive, files: [], scannedCount: 0, nextOffsetId: undefined,
           requestId: undefined, status: 'error', error: 'unavailable',
         },
       }, tabId);
-    } else if (currentTab.xydrive && (result?.type === 'unavailable' || result?.type === 'message')) {
+    } else if (currentTab.xydrive?.sourceId === sourceId && (result?.type === 'unavailable' || result?.type === 'message')) {
       global = updateTabState(global, {
         xydrive: { ...currentTab.xydrive, files: currentTab.xydrive.files.filter((item) => item.id !== fileId) },
       }, tabId);
     }
-    setGlobal(global);
+    setGlobal(updateTabState(global, { xydriveIndex: undefined }, tabId));
     return;
   }
 
