@@ -4846,3 +4846,5 @@
 
 "XydriveTransferQueueFull" = "Transfer queue is full. Wait for a transfer to finish.";
 "XydriveTransferCancelAll" = "Cancel all";
+
+"XydriveBackToChats" = "Back to chats";

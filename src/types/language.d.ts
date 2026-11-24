@@ -3608,6 +3608,7 @@ export interface LangPair {
   'XydriveTransferDownloadSelected': undefined;
   'XydriveTransferDuplicate': undefined;
   'XydriveTransferLimit': undefined;
+  'XydriveBackToChats': undefined;
   'XydriveTitle': undefined;
   'XydriveBeta': undefined;
   'XydriveEnable': undefined;

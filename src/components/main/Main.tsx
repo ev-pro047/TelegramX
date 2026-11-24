@@ -151,6 +151,7 @@ type StateProps = {
   isAccountFrozen?: boolean;
   isAppConfigLoaded?: boolean;
   isFoldersSidebarShown: boolean;
+  isXydriveOpen: boolean;
   diceEmojies?: string[];
   selectedGiftAuction?: ApiStarGiftAuctionState;
 };
@@ -208,6 +209,7 @@ const Main = ({
   isAccountFrozen,
   isAppConfigLoaded,
   isFoldersSidebarShown,
+  isXydriveOpen,
   diceEmojies,
   selectedGiftAuction,
 }: OwnProps & StateProps) => {
@@ -579,6 +581,7 @@ const Main = ({
     shouldSkipHistoryAnimations && 'history-animation-disabled',
     isFullscreen && 'is-fullscreen',
     isFoldersSidebarShown && 'folders-sidebar-visible',
+    isXydriveOpen && 'xydrive-page-active',
   );
 
   const handleBlur = useLastCallback(() => {
@@ -651,6 +654,7 @@ const Main = ({
         onPlayerPaneStateChange={handlePlayerPaneStateChange}
       />
       <RightColumn isMobile={isMobile} />
+      <XydriveAsync />
       <MediaViewer isOpen={isMediaViewerOpen} />
       <StoryViewer isOpen={isStoryViewerOpen} />
       <ForwardRecipientPicker isOpen={isForwardModalOpen} />
@@ -659,7 +663,6 @@ const Main = ({
       <AudioPlayer noUi />
       <FloatingRoundVideo />
       <ModalContainer />
-      <XydriveAsync />
       <HistoryCalendar isOpen={isHistoryCalendarOpen} />
       <StickerSetModal
         isOpen={Boolean(openedStickerSetShortName)}
@@ -795,6 +798,8 @@ export default memo(withGlobal<OwnProps>(
       isAccountFrozen,
       isAppConfigLoaded: global.isAppConfigLoaded,
       isFoldersSidebarShown: foldersPosition === FOLDERS_POSITION_LEFT && !isMobile && selectAreFoldersPresent(global),
+      isXydriveOpen: Boolean(currentUserId && !global.passcode.isScreenLocked
+        && selectSharedSettings(global).isXydriveEnabled && selectTabState(global).xydriveOwnerId === currentUserId),
       diceEmojies: global.appConfig?.diceEmojies,
       selectedGiftAuction,
     };

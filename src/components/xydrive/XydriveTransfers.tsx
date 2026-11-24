@@ -46,7 +46,7 @@ const XydriveTransfers = ({ ownerId, files }: OwnProps) => {
   const picker = useRef<HTMLInputElement>();
   const [rows, setRows] = useState(() => getXydriveTransfers(ownerId));
   const [filter, setFilter] = useState<Filter>('all');
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [duplicateFiles, setDuplicateFiles] = useState<File[]>([]);
 

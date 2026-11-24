@@ -5,12 +5,13 @@ import type { XydriveFile, XydriveMount, XydriveState } from '../../lib/xydrive/
 
 import { isXydriveChannelEligible } from '../../lib/xydrive/folders';
 
+import buildClassName from '../../util/buildClassName';
+
 import useLang from '../../hooks/useLang';
 
 import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
-import Modal from '../ui/Modal';
 import AudioPlayer from '../middle/panes/AudioPlayer';
 import XydriveExplorer from './XydriveExplorer';
 import XydriveTransfers from './XydriveTransfers';
@@ -33,7 +34,6 @@ type OwnProps = {
   onPreview: (file: XydriveFile) => void;
   previewingId?: string;
   mediaError?: 'wait' | 'unavailable';
-  isViewerOpen?: boolean;
   onSelectSource: (channelId?: string) => void;
   onMount: (channelId: string) => void;
   onUnmount: (channelId: string) => void;
@@ -44,7 +44,7 @@ const EMPTY_FILES: XydriveFile[] = [];
 const Xydrive = ({
   isOpen, ownerId, drive, sourceId, folders, chats, mountingId, mountError,
   onClose, onOpenSaved, onLoadMore, onOpenMessage, onSelectSource, onMount, onUnmount,
-  onPreview, previewingId, mediaError, isViewerOpen,
+  onPreview, previewingId, mediaError,
 }: OwnProps) => {
   const lang = useLang();
   const [isMountPickerOpen, setIsMountPickerOpen] = useState(false);
@@ -65,143 +65,173 @@ const Xydrive = ({
   const hasError = drive?.status === 'error';
   const hasMore = drive?.nextOffsetId !== undefined;
 
+  if (!isOpen) return undefined;
+
   return (
-    <Modal
-      isOpen={isOpen}
-      title={lang('XydriveTitle')}
-      dialogClassName={styles.dialog}
-      hasCloseButton
-      isBackButton
-      noFreezeOnClose
-      isKeyboardSuspended={isViewerOpen}
-      onClose={onClose}
-    >
-      <div className={styles.workspace} dir={lang.isRtl ? 'rtl' : 'ltr'}>
-        <div className={styles.header}>
-          <div className={styles.headerText}>
-            <span className={styles.badge}>{lang('XydriveBeta')}</span>
-            <h2 className={styles.heading}>{lang('XydriveMyDrive')}</h2>
-            <p className={styles.description}>{lang('XydriveDriveDesc')}</p>
-          </div>
-          {!sourceId && (
-            <Button size="smaller" color="translucent" onClick={() => setIsMountPickerOpen(!isMountPickerOpen)}>
-              {lang(isMountPickerOpen ? 'Close' : 'XydriveMountFolder')}
-            </Button>
-          )}
+    <section id="XydrivePage" className={styles.page} dir={lang.isRtl ? 'rtl' : 'ltr'} aria-label={lang('XydriveTitle')}>
+      <header className={styles.topbar}>
+        <Button size="smaller" color="translucent" onClick={onClose}>
+          {lang('XydriveBackToChats')}
+        </Button>
+        <div className={styles.brand}>
+          <Icon name="folder-filled" />
+          <strong>{lang('XydriveTitle')}</strong>
+          <span className={styles.badge}>{lang('XydriveBeta')}</span>
         </div>
-        {isOpen && <AudioPlayer isCompact />}
-        <nav className={styles.breadcrumb} aria-label={lang('XydriveFolderPath')}>
-          <Button
-            size="smaller"
-            color="translucent"
-            onClick={() => onSelectSource()}
-            disabled={!sourceId}
-          >
-            {lang('XydriveRoot')}
-          </Button>
-          {folder && <span className={styles.folderPath} dir="auto">/ {folder.title}</span>}
-        </nav>
-        {!sourceId && (
-          <>
-            {isMountPickerOpen && (
-              <section className={styles.mountPanel}>
-                <h3 className={styles.sectionTitle}>{lang('XydriveMountFolder')}</h3>
-                <p className={styles.description}>{lang('XydriveMountDesc')}</p>
-                {candidates.length === 0 && <p className={styles.description}>{lang('XydriveNoChannels')}</p>}
-                {candidates.map((chat) => (
-                  <div key={chat.id} className={styles.mountRow}>
-                    <Icon name="folder" className={styles.fileIcon} />
-                    <span className={styles.fileName} dir="auto">{chat.title}</span>
-                    <Button
-                      size="smaller"
-                      color="translucent"
-                      disabled={Boolean(mountingId)}
-                      onClick={() => onMount(chat.id)}
-                    >
-                      {lang(mountingId === chat.id ? 'XydriveMounting' : 'XydriveMount')}
-                    </Button>
-                  </div>
-                ))}
-                {mountError && (
-                  <p className={styles.description} role="alert">
-                    {lang(mountError === 'wait' ? 'XydriveWait'
-                      : mountError === 'unavailable' ? 'XydriveUnavailable' : 'XydriveMountError')}
-                  </p>
-                )}
-              </section>
+      </header>
+      <div className={styles.layout}>
+        <aside className={styles.sidebar} aria-label={lang('XydriveFolders')}>
+          <div className={styles.sidebarTitle}>{lang('XydriveMyDrive')}</div>
+          <nav className={styles.sidebarNav} aria-label={lang('XydriveFolderPath')}>
+            <button
+              type="button"
+              className={buildClassName(styles.navItem, !sourceId && styles.navActive)}
+              aria-current={!sourceId ? 'page' : undefined}
+              onClick={() => onSelectSource()}
+            >
+              <Icon name="folder" />
+              <span>{lang('XydriveRoot')}</span>
+            </button>
+            {folders?.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={buildClassName(styles.navItem, sourceId === item.id && styles.navActive)}
+                aria-current={sourceId === item.id ? 'page' : undefined}
+                onClick={() => onSelectSource(item.id)}
+              >
+                <Icon name="folder-filled" />
+                <span dir="auto">{item.title}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+        <main className={styles.workspace} aria-label={lang('XydriveExplorer')}>
+          <div className={styles.header}>
+            <div className={styles.headerText}>
+              <h1 className={styles.heading} dir="auto">{folder?.title || lang('XydriveMyDrive')}</h1>
+              <p className={styles.description}>{lang('XydriveDriveDesc')}</p>
+            </div>
+            {!sourceId && (
+              <Button size="smaller" color="translucent" onClick={() => setIsMountPickerOpen(!isMountPickerOpen)}>
+                {lang(isMountPickerOpen ? 'Close' : 'XydriveMountFolder')}
+              </Button>
             )}
-            <h3 className={styles.sectionTitle}>{lang('XydriveFolders')}</h3>
-            {folders?.length ? (
-              <div className={styles.folderGrid}>
-                {folders.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={styles.folderCard}
-                    onClick={() => onSelectSource(item.id)}
-                  >
-                    <Icon name="folder-filled" className={styles.folderIcon} />
-                    <span className={styles.fileName} dir="auto">{item.title}</span>
-                    <span className={styles.fileMeta}>{lang('XydrivePrivateChannel')}</span>
-                  </button>
-                ))}
-              </div>
-            ) : <p className={styles.description}>{lang('XydriveNoFolders')}</p>}
-          </>
-        )}
-        <div className={styles.fileHeader}>
-          <h3 className={styles.sectionTitle}>{lang(sourceId ? 'XydriveFolderFiles' : 'XydriveRootFiles')}</h3>
-          {folder ? (
-            <Button size="smaller" color="translucent" onClick={() => onUnmount(folder.id)}>
-              {lang('XydriveUnmount')}
+          </div>
+          <AudioPlayer isCompact />
+          <nav className={styles.breadcrumb} aria-label={lang('XydriveFolderPath')}>
+            <Button
+              size="smaller"
+              color="translucent"
+              onClick={() => onSelectSource()}
+              disabled={!sourceId}
+            >
+              {lang('XydriveRoot')}
             </Button>
-          ) : (
-            <Button size="smaller" color="translucent" onClick={onOpenSaved}>
-              {lang('XydriveOpenSaved')}
-            </Button>
+            {folder && <span className={styles.folderPath} dir="auto">/ {folder.title}</span>}
+          </nav>
+          {!sourceId && (
+            <>
+              {isMountPickerOpen && (
+                <section className={styles.mountPanel}>
+                  <h3 className={styles.sectionTitle}>{lang('XydriveMountFolder')}</h3>
+                  <p className={styles.description}>{lang('XydriveMountDesc')}</p>
+                  {candidates.length === 0 && <p className={styles.description}>{lang('XydriveNoChannels')}</p>}
+                  {candidates.map((chat) => (
+                    <div key={chat.id} className={styles.mountRow}>
+                      <Icon name="folder" className={styles.fileIcon} />
+                      <span className={styles.fileName} dir="auto">{chat.title}</span>
+                      <Button
+                        size="smaller"
+                        color="translucent"
+                        disabled={Boolean(mountingId)}
+                        onClick={() => onMount(chat.id)}
+                      >
+                        {lang(mountingId === chat.id ? 'XydriveMounting' : 'XydriveMount')}
+                      </Button>
+                    </div>
+                  ))}
+                  {mountError && (
+                    <p className={styles.description} role="alert">
+                      {lang(mountError === 'wait' ? 'XydriveWait'
+                        : mountError === 'unavailable' ? 'XydriveUnavailable' : 'XydriveMountError')}
+                    </p>
+                  )}
+                </section>
+              )}
+              <h3 className={styles.sectionTitle}>{lang('XydriveFolders')}</h3>
+              {folders?.length ? (
+                <div className={styles.folderGrid}>
+                  {folders.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={styles.folderCard}
+                      onClick={() => onSelectSource(item.id)}
+                    >
+                      <Icon name="folder-filled" className={styles.folderIcon} />
+                      <span className={styles.fileName} dir="auto">{item.title}</span>
+                      <span className={styles.fileMeta}>{lang('XydrivePrivateChannel')}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : <p className={styles.description}>{lang('XydriveNoFolders')}</p>}
+            </>
           )}
-        </div>
-        {isOpen && <XydriveTransfers key={`${ownerId}:${sourceId || 'root'}`} ownerId={ownerId} files={files} />}
-        {isOpen && (
-          <XydriveExplorer
-            key={sourceId || 'root'}
-            files={files}
-            isComplete={drive?.status === 'ready' && !hasMore}
-            isLoading={isLoading}
-            onOpenMessage={onOpenMessage}
-            onPreview={onPreview}
-            previewingId={previewingId}
-          />
-        )}
-        {mediaError && (
-          <p role="alert" className={styles.description}>
-            {lang(mediaError === 'wait' ? 'XydriveWait' : 'XydriveMediaUnavailable')}
-          </p>
-        )}
-        <div className={styles.status} aria-live="polite">
-          {isLoading && <Loading />}
-          {hasError && (
-            <p className={styles.description}>
-              {lang(drive?.error === 'wait' ? 'XydriveWait'
-                : drive?.error === 'unavailable' ? 'XydriveUnavailable' : 'XydriveLoadError')}
+          <div className={styles.fileHeader}>
+            <h3 className={styles.sectionTitle}>{lang(sourceId ? 'XydriveFolderFiles' : 'XydriveRootFiles')}</h3>
+            {folder ? (
+              <Button size="smaller" color="translucent" onClick={() => onUnmount(folder.id)}>
+                {lang('XydriveUnmount')}
+              </Button>
+            ) : (
+              <Button size="smaller" color="translucent" onClick={onOpenSaved}>
+                {lang('XydriveOpenSaved')}
+              </Button>
+            )}
+          </div>
+          {isOpen && <XydriveTransfers key={`${ownerId}:${sourceId || 'root'}`} ownerId={ownerId} files={files} />}
+          {isOpen && (
+            <XydriveExplorer
+              key={sourceId || 'root'}
+              files={files}
+              isComplete={drive?.status === 'ready' && !hasMore}
+              isLoading={isLoading}
+              onOpenMessage={onOpenMessage}
+              onPreview={onPreview}
+              previewingId={previewingId}
+            />
+          )}
+          {mediaError && (
+            <p role="alert" className={styles.description}>
+              {lang(mediaError === 'wait' ? 'XydriveWait' : 'XydriveMediaUnavailable')}
             </p>
           )}
-          {!isLoading && !hasError && !files.length && (
-            <p className={styles.description}>
-              {lang(hasMore ? 'XydriveNoFilesYet' : sourceId ? 'XydriveEmptyFolder' : 'XydriveEmpty')}
-            </p>
-          )}
-          {!isLoading && !hasError && Boolean(files.length) && !hasMore && (
-            <p className={styles.description}>{lang(sourceId ? 'XydriveFolderEnd' : 'XydriveEnd')}</p>
-          )}
-          {!isLoading && (hasError || hasMore) && (
-            <Button color="translucent" onClick={onLoadMore}>
-              {lang(hasError ? 'XydriveRetry' : 'XydriveLoadMore')}
-            </Button>
-          )}
-        </div>
+          <div className={styles.status} aria-live="polite">
+            {isLoading && <Loading />}
+            {hasError && (
+              <p className={styles.description}>
+                {lang(drive?.error === 'wait' ? 'XydriveWait'
+                  : drive?.error === 'unavailable' ? 'XydriveUnavailable' : 'XydriveLoadError')}
+              </p>
+            )}
+            {!isLoading && !hasError && !files.length && (
+              <p className={styles.description}>
+                {lang(hasMore ? 'XydriveNoFilesYet' : sourceId ? 'XydriveEmptyFolder' : 'XydriveEmpty')}
+              </p>
+            )}
+            {!isLoading && !hasError && Boolean(files.length) && !hasMore && (
+              <p className={styles.description}>{lang(sourceId ? 'XydriveFolderEnd' : 'XydriveEnd')}</p>
+            )}
+            {!isLoading && (hasError || hasMore) && (
+              <Button color="translucent" onClick={onLoadMore}>
+                {lang(hasError ? 'XydriveRetry' : 'XydriveLoadMore')}
+              </Button>
+            )}
+          </div>
+        </main>
       </div>
-    </Modal>
+    </section>
   );
 };
 
