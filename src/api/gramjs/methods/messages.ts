@@ -62,6 +62,7 @@ import { fetchFile } from '../../../util/files';
 import { compact, omit, split } from '../../../util/iteratees';
 import { getMessageKey, getMtpEphemeralMessageId } from '../../../util/keys/messageKey';
 import { getServerTime } from '../../../util/serverTime';
+import { isXydriveChannelEligible } from '../../../lib/xydrive/folders';
 import { getXydriveNextOffset } from '../../../lib/xydrive/pagination';
 import { interpolateArray } from '../../../util/waveform';
 import { API_GENERAL_ID_LIMIT, PINNED_MESSAGES_LIMIT } from '../../../limits';
@@ -252,15 +253,55 @@ export async function fetchMessages({
 let xydriveRetryAt = 0;
 const XYDRIVE_HISTORY_PAGE_SIZE = 50;
 
-export async function fetchXydriveHistory({ offsetId }: { offsetId?: number }) {
+async function fetchVerifiedXydriveChannel(channel: ApiChat) {
+  const result = await invokeRequest(new GramJs.channels.GetChannels({
+    id: [buildInputChannel(channel.id, channel.accessHash)],
+  }), { shouldThrow: true });
+
+  if (!result) return undefined;
+  const raw = result.chats.find((chat) => chat instanceof GramJs.Channel);
+  if (!(raw instanceof GramJs.Channel) || !raw.broadcast || !raw.creator || raw.restricted) return undefined;
+  const verified = buildApiChatFromPreview(raw);
+  if (!verified || verified.id !== channel.id || !isXydriveChannelEligible(verified)) return undefined;
+
+  return { id: verified.id, title: verified.title, accessHash: verified.accessHash! };
+}
+
+function isXydriveChannelUnavailable(err: unknown) {
+  return err instanceof RPCError && [
+    'CHANNEL_PRIVATE', 'CHANNEL_INVALID', 'CHAT_ADMIN_REQUIRED', 'USER_BANNED_IN_CHANNEL',
+  ].includes(err.errorMessage);
+}
+
+export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
+  const remaining = xydriveRetryAt - getServerTime();
+  if (remaining > 0) return { type: 'wait' as const };
+
+  try {
+    const folder = await fetchVerifiedXydriveChannel(channel);
+    return folder ? { type: 'channel' as const, folder } : { type: 'unavailable' as const };
+  } catch (err) {
+    if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + err.seconds;
+      return { type: 'wait' as const };
+    }
+    if (isXydriveChannelUnavailable(err)) return { type: 'unavailable' as const };
+    return undefined;
+  }
+}
+
+export async function fetchXydriveHistory({ offsetId, channel }: { offsetId?: number; channel?: ApiChat }) {
   const remaining = xydriveRetryAt - getServerTime();
   if (remaining > 0) {
     return { type: 'wait' as const, retryAfter: remaining };
   }
 
   try {
+    const verified = channel ? await fetchVerifiedXydriveChannel(channel) : undefined;
+    if (channel && !verified) return { type: 'unavailable' as const };
+
     const result = await invokeRequest(new GramJs.messages.GetHistory({
-      peer: new GramJs.InputPeerSelf(),
+      peer: verified ? buildInputPeer(verified.id, verified.accessHash) : new GramJs.InputPeerSelf(),
       offsetId: offsetId ?? DEFAULT_PRIMITIVES.INT,
       offsetDate: DEFAULT_PRIMITIVES.INT,
       addOffset: DEFAULT_PRIMITIVES.INT,
@@ -280,12 +321,13 @@ export async function fetchXydriveHistory({ offsetId }: { offsetId?: number }) {
     if (rawIds.length && nextOffsetId === undefined) return undefined;
 
     const messages = result.messages.map(buildApiMessage).filter(Boolean);
-    return { type: 'page' as const, messages, nextOffsetId, scannedCount: rawIds.length };
+    return { type: 'page' as const, messages, nextOffsetId, scannedCount: rawIds.length, folder: verified };
   } catch (err) {
     if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
       xydriveRetryAt = getServerTime() + err.seconds;
       return { type: 'wait' as const, retryAfter: err.seconds };
     }
+    if (channel && isXydriveChannelUnavailable(err)) return { type: 'unavailable' as const };
     return undefined;
   }
 }

@@ -36,8 +36,8 @@ export function classifyXydriveFile(name: string, mimeType?: string): XydriveCat
   return 'other';
 }
 
-export function getXydriveFile(message: ApiMessage, ownerId: string): XydriveFile | undefined {
-  if (message.chatId !== ownerId || !Number.isSafeInteger(message.id) || message.id <= 0
+export function getXydriveFile(message: ApiMessage, sourceId: string): XydriveFile | undefined {
+  if (message.chatId !== sourceId || !Number.isSafeInteger(message.id) || message.id <= 0
     || message.isProtected || message.ttlPeriod || message.content.ttlSeconds !== undefined
     || message.isEphemeral || message.isScheduled || message.sendingState || message.isDeleting
     || message.restrictionReasons?.length) return undefined;
@@ -60,8 +60,8 @@ export function getXydriveFile(message: ApiMessage, ownerId: string): XydriveFil
       : mediaType === 'sticker' ? 'other' : classifyXydriveFile(name, mimeType);
 
   return {
-    id: `${ownerId}:${message.id}:${mediaType}`,
-    chatId: ownerId,
+    id: `${sourceId}:${message.id}:${mediaType}`,
+    chatId: sourceId,
     messageId: message.id,
     mediaId,
     name,
