@@ -141,7 +141,7 @@ import { processMessageAndUpdateThreadInfo } from '../updates/entityProcessor';
 import { processAffectedHistory, updateChannelState } from '../updates/updateManager';
 import { requestChatUpdate } from './chats';
 import {
-  handleGramJsUpdate, invokeRequest, invokeRequestBeacon, repairFileReference, uploadFile,
+  handleGramJsUpdate, invokeRequest, invokeRequestBeacon, isXydriveCurrentAccount, repairFileReference, uploadFile,
 } from './client';
 
 const FAST_SEND_TIMEOUT = 1000;
@@ -289,6 +289,49 @@ export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
     }
     if (isXydriveChannelUnavailable(err)) return { type: 'unavailable' as const };
     return undefined;
+  }
+}
+
+// Use the native attachment builder and DC bandwidth manager without consuming a chat draft.
+export async function uploadXydriveDocument({
+  ownerId, chat, channel, attachment,
+}: {
+  ownerId: string; chat: ApiChat; channel?: ApiChat; attachment: ApiAttachment;
+}, onProgress: ApiOnProgress) {
+  if (!isXydriveCurrentAccount(ownerId) || onProgress.isCanceled
+    || (!channel && chat.id !== ownerId) || (channel && channel.id !== chat.id)
+    || !attachment.shouldSendAsFile || attachment.size <= 0) return 'unavailable' as const;
+  if (xydriveRetryAt > getServerTime()) return 'wait' as const;
+
+  let isCommitting = false;
+  try {
+    const verified = channel ? await fetchVerifiedXydriveChannel(channel) : undefined;
+    if (channel && !verified) return 'unavailable' as const;
+    if (onProgress.isCanceled || !isXydriveCurrentAccount(ownerId)) return 'canceled' as const;
+    const media = await uploadAttachment(verified?.chat || chat, attachment, onProgress);
+    if (onProgress.isCanceled || !isXydriveCurrentAccount(ownerId)) return 'canceled' as const;
+    const destination = channel ? await fetchVerifiedXydriveChannel(channel) : undefined;
+    if (channel && !destination) return 'unavailable' as const;
+    if (onProgress.isCanceled || !isXydriveCurrentAccount(ownerId)) return 'canceled' as const;
+    isCommitting = true;
+    onProgress(1, 'committing');
+    const result = await invokeRequest(new GramJs.messages.SendMedia({
+      peer: destination ? buildInputPeer(destination.id, destination.accessHash) : new GramJs.InputPeerSelf(),
+      media,
+      message: '',
+      randomId: generateRandomBigInt(),
+      clearDraft: false,
+    }), { shouldThrow: true });
+    return result ? 'complete' as const : 'unknown' as const;
+  } catch (err) {
+    if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + err.seconds;
+      return 'wait' as const;
+    }
+    if (isXydriveChannelUnavailable(err)) return 'unavailable' as const;
+    // Do not resend automatically after a potentially ambiguous server acknowledgement.
+    if (isCommitting) return 'unknown' as const;
+    return onProgress.isCanceled ? 'canceled' as const : 'failed' as const;
   }
 }
 

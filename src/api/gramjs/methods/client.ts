@@ -96,6 +96,10 @@ const ABORT_CONTROLLERS = new Map<string, AbortController>();
 let client: TelegramClient;
 let currentUserId: string | undefined;
 
+export function isXydriveCurrentAccount(ownerId: string) {
+  return currentUserId === ownerId;
+}
+
 export function setLanguageCode({ langCode }: { langCode: string }) {
   return client.setLanguageCode(langCode);
 }

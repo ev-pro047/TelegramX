@@ -10,6 +10,7 @@ import type { RegularLangKey } from '../../types/language';
 import {
   EMPTY_XYDRIVE_SELECTION, queryXydriveFiles, restrictXydriveSelection, selectXydriveFile,
 } from '../../lib/xydrive/explorer';
+import { enqueueXydriveDownload } from '../../lib/xydrive/transfers';
 import buildClassName from '../../util/buildClassName';
 import { formatFileSize } from '../../util/text/textFormat';
 
@@ -199,6 +200,14 @@ const XydriveExplorer = ({
             <Button size="tiny" color="translucent" onClick={selectAll}>{lang('XydriveSelectVisible')}</Button>
           )}
           {visibleSelection.ids.size > 0 && (
+            <Button size="tiny" color="translucent" onClick={() => {
+              visibleFiles.filter(({ id }) => visibleSelection.ids.has(id)).forEach(enqueueXydriveDownload);
+            }}
+            >
+              {lang('XydriveTransferDownloadSelected')}
+            </Button>
+          )}
+          {visibleSelection.ids.size > 0 && (
             <Button size="tiny" color="translucent" onClick={() => setSelection(EMPTY_XYDRIVE_SELECTION)}>
               {lang('XydriveClearSelection')}
             </Button>
@@ -301,6 +310,9 @@ const XydriveExplorer = ({
                                 {lang('XydrivePreview')}
                               </MenuItem>
                             )}
+                            <MenuItem icon="download" onClick={() => enqueueXydriveDownload(file)}>
+                              {lang('XydriveTransferDownload')}
+                            </MenuItem>
                             <MenuItem icon="info" onClick={() => setDetailsId(file.id)}>{lang('XydriveDetails')}</MenuItem>
                             <MenuItem icon="check" onClick={() => toggleFile(file.id)}>
                               {lang(isSelected ? 'XydriveDeselectFile' : 'XydriveSelectFile')}
@@ -353,6 +365,9 @@ const XydriveExplorer = ({
                 {lang('XydrivePreview')}
               </Button>
             )}
+            <Button size="smaller" onClick={() => enqueueXydriveDownload(details)}>
+              {lang('XydriveTransferDownload')}
+            </Button>
             <Button size="smaller" color="translucent" onClick={() => onOpenMessage(details)}>
               {lang('XydriveOpenMessage')}
             </Button>
