@@ -222,7 +222,7 @@ const XydriveExplorer = ({
                   >
                     <button
                       type="button"
-                      data-xydrive-file
+                      data-xydrive-file="true"
                       className={styles.fileMain}
                       aria-pressed={isSelected}
                       title={file.name}
@@ -265,7 +265,14 @@ const XydriveExplorer = ({
                           <Icon name="more" />
                         </button>
                         {menuId === file.id && (
-                          <Menu isOpen autoClose positionX="right" positionY="bottom" onClose={() => setMenuId(undefined)}>
+                          <Menu
+                            isOpen
+                            autoClose
+                            ariaLabel={lang('XydriveFileActions')}
+                            positionX={lang.isRtl ? 'left' : 'right'}
+                            positionY="bottom"
+                            onClose={() => setMenuId(undefined)}
+                          >
                             <MenuItem icon="info" onClick={() => setDetailsId(file.id)}>{lang('XydriveDetails')}</MenuItem>
                             <MenuItem icon="check" onClick={() => toggleFile(file.id)}>
                               {lang(isSelected ? 'XydriveDeselectFile' : 'XydriveSelectFile')}

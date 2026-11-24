@@ -168,12 +168,12 @@ const Xydrive = ({
                 : drive?.error === 'unavailable' ? 'XydriveUnavailable' : 'XydriveLoadError')}
             </p>
           )}
-          {!isLoading && !hasError && !files?.length && (
+          {!isLoading && !hasError && !files.length && (
             <p className={styles.description}>
               {lang(hasMore ? 'XydriveNoFilesYet' : sourceId ? 'XydriveEmptyFolder' : 'XydriveEmpty')}
             </p>
           )}
-          {!isLoading && !hasError && Boolean(files?.length) && !hasMore && (
+          {!isLoading && !hasError && Boolean(files.length) && !hasMore && (
             <p className={styles.description}>{lang(sourceId ? 'XydriveFolderEnd' : 'XydriveEnd')}</p>
           )}
           {!isLoading && (hasError || hasMore) && (
