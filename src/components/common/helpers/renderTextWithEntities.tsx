@@ -1,0 +1,757 @@
+import { getActions, getGlobal } from '../../../global';
+
+import type { ApiMessageEntity } from '../../../api/types';
+import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
+import type { TextPart, ThreadId } from '../../../types';
+import type { TextFilter } from './renderText';
+import { ApiMessageEntityTypes, MAIN_THREAD_ID } from '../../../api/types';
+
+import { isChatChannel } from '../../../global/helpers';
+import {
+  selectChat, selectChatFullInfo, selectChatMessage, selectIsChatWithBot,
+} from '../../../global/selectors';
+import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
+import { ensureProtocol } from '../../../util/browser/url';
+import buildClassName from '../../../util/buildClassName';
+import { copyTextToClipboard } from '../../../util/clipboard';
+import { buildFormattedDateHtml } from '../../../util/dates/formattedDate';
+import { escapeHtmlAttribute } from '../../middle/composer/helpers/cleanHtml';
+import { buildCustomEmojiHtmlFromEntity } from '../../middle/composer/helpers/customEmoji';
+import renderText from './renderText';
+
+import MentionLink from '../../middle/message/MentionLink';
+import CodeBlock from '../code/CodeBlock';
+import CustomEmoji from '../CustomEmoji';
+import FormattedDate from '../FormattedDate';
+import Blockquote from '../quote/Blockquote';
+import SafeLink from '../SafeLink';
+import Spoiler from '../spoiler/Spoiler';
+import TonAddressLink from '../TonAddressLink';
+
+interface IOrganizedEntity {
+  entity: ApiMessageEntity;
+  organizedIndexes: Set<number>;
+  nestedEntities: IOrganizedEntity[];
+}
+const HQ_EMOJI_THRESHOLD = 64;
+
+export function renderTextWithEntities({
+  text,
+  entities,
+  emojiSize,
+  shouldRenderAsHtml,
+  containerId,
+  asPreview,
+  isProtected,
+  observeIntersectionForLoading,
+  observeIntersectionForPlaying,
+  withTranslucentThumbs,
+  cacheBuster,
+  forcePlayback,
+  noCustomEmojiPlayback,
+  isInSelectMode,
+  chatId,
+  messageId,
+  threadId,
+  maxTimestamp,
+}: {
+  text: string;
+  entities?: ApiMessageEntity[];
+  emojiSize?: number;
+  shouldRenderAsHtml?: boolean;
+  containerId?: string;
+  asPreview?: boolean;
+  isProtected?: boolean;
+  observeIntersectionForLoading?: ObserveFn;
+  observeIntersectionForPlaying?: ObserveFn;
+  withTranslucentThumbs?: boolean;
+  cacheBuster?: string;
+  forcePlayback?: boolean;
+  noCustomEmojiPlayback?: boolean;
+  isInSelectMode?: boolean;
+  chatId?: string;
+  messageId?: number;
+  threadId?: ThreadId;
+  maxTimestamp?: number;
+}) {
+  if (!entities?.length) {
+    return renderMessagePart({
+      content: text,
+      emojiSize,
+      shouldRenderAsHtml,
+      asPreview,
+    });
+  }
+
+  const result: TextPart[] = [];
+  let deleteLineBreakAfterPre = false;
+
+  const organizedEntities = organizeEntities(entities);
+
+  // Recursive function to render regular and nested entities
+  function renderEntity(
+    textPartStart: number,
+    textPartEnd: number,
+    organizedEntity: IOrganizedEntity,
+    isLastEntity: boolean,
+  ) {
+    const renderResult: TextPart[] = [];
+    const { entity, nestedEntities } = organizedEntity;
+    const { offset, length, type } = entity;
+
+    // Render text before the entity
+    let textBefore = text.substring(textPartStart, offset);
+    const textBeforeLength = textBefore.length;
+    if (textBefore) {
+      if (deleteLineBreakAfterPre && textBefore.length > 0 && textBefore[0] === '\n') {
+        textBefore = textBefore.substr(1);
+        deleteLineBreakAfterPre = false;
+      }
+      if (textBefore) {
+        renderResult.push(...renderMessagePart({
+          content: textBefore,
+          emojiSize,
+          shouldRenderAsHtml,
+          asPreview,
+        }));
+      }
+    }
+
+    const entityStartIndex = textPartStart + textBeforeLength;
+    const entityEndIndex = entityStartIndex + length;
+
+    let entityContent: TextPart = text.substring(offset, offset + length);
+    const nestedEntityContent: TextPart[] = [];
+
+    if (deleteLineBreakAfterPre && entityContent.length > 0 && entityContent[0] === '\n') {
+      entityContent = entityContent.substr(1);
+      deleteLineBreakAfterPre = false;
+    }
+
+    if (type === ApiMessageEntityTypes.Pre) {
+      deleteLineBreakAfterPre = true;
+    }
+
+    // Render nested entities, if any
+    if (nestedEntities.length) {
+      let nestedIndex = entityStartIndex;
+
+      nestedEntities.forEach((nestedEntity, nestedEntityIndex) => {
+        const {
+          renderResult: nestedResult,
+          entityEndIndex: nestedEntityEndIndex,
+        } = renderEntity(
+          nestedIndex,
+          entityEndIndex,
+          nestedEntity,
+          nestedEntityIndex === nestedEntities.length - 1,
+        );
+
+        nestedEntityContent.push(...nestedResult);
+        nestedIndex = nestedEntityEndIndex;
+      });
+    }
+
+    // Render the entity itself
+    const newEntity = shouldRenderAsHtml
+      ? processEntityAsHtml(entity, entityContent, nestedEntityContent)
+      : processEntity({
+        entity,
+        entityContent,
+        nestedEntityContent,
+        containerId,
+        asPreview,
+        isProtected,
+        observeIntersectionForLoading,
+        observeIntersectionForPlaying,
+        withTranslucentThumbs,
+        emojiSize,
+        hasCanvasContent: type === ApiMessageEntityTypes.Blockquote && hasCanvasContent(nestedEntities),
+        cacheBuster,
+        forcePlayback,
+        noCustomEmojiPlayback,
+        isInSelectMode,
+        chatId,
+        messageId,
+        threadId,
+        maxTimestamp,
+      });
+
+    if (Array.isArray(newEntity)) {
+      renderResult.push(...newEntity);
+    } else {
+      renderResult.push(newEntity);
+    }
+
+    // Render text after the entity, if it is the last entity in the text,
+    // or the last nested entity inside of another entity
+    if (isLastEntity && entityEndIndex < textPartEnd) {
+      let textAfter = text.substring(entityEndIndex, textPartEnd);
+      if (deleteLineBreakAfterPre && textAfter.length > 0 && textAfter[0] === '\n') {
+        textAfter = textAfter.substring(1);
+      }
+      if (textAfter) {
+        renderResult.push(...renderMessagePart({
+          content: textAfter,
+          emojiSize,
+          shouldRenderAsHtml,
+          asPreview,
+        }));
+      }
+    }
+
+    return {
+      renderResult,
+      entityEndIndex,
+    };
+  }
+
+  // Process highest-level entities
+  let index = 0;
+
+  organizedEntities.forEach((entity, arrayIndex) => {
+    const { renderResult, entityEndIndex } = renderEntity(
+      index,
+      text.length,
+      entity,
+      arrayIndex === organizedEntities.length - 1,
+    );
+
+    result.push(...renderResult);
+    index = entityEndIndex;
+  });
+
+  return result;
+}
+
+function renderMessagePart({
+  content,
+  emojiSize,
+  shouldRenderAsHtml,
+  asPreview,
+}: {
+  content: TextPart | TextPart[];
+  emojiSize?: number;
+  shouldRenderAsHtml?: boolean;
+  asPreview?: boolean;
+}) {
+  if (Array.isArray(content)) {
+    const result: TextPart[] = [];
+
+    content.forEach((c) => {
+      result.push(...renderMessagePart({
+        content: c,
+        emojiSize,
+        shouldRenderAsHtml,
+        asPreview,
+      }));
+    });
+
+    return result;
+  }
+
+  if (shouldRenderAsHtml) {
+    return renderText(content, ['escape_html', 'emoji_html', 'br_html']);
+  }
+
+  const emojiFilter = emojiSize && emojiSize > HQ_EMOJI_THRESHOLD ? 'hq_emoji' : 'emoji';
+
+  const filters: TextFilter[] = [emojiFilter];
+  if (!asPreview) {
+    filters.push('br');
+  }
+
+  return renderText(content, filters);
+}
+
+// Organize entities in a tree-like structure to better represent how the text will be displayed
+function organizeEntities(entities: ApiMessageEntity[]) {
+  const organizedEntityIndexes = new Set<number>();
+  const organizedEntities: IOrganizedEntity[] = [];
+
+  entities.forEach((entity, index) => {
+    if (organizedEntityIndexes.has(index)) {
+      return;
+    }
+
+    const organizedEntity = organizeEntity(entity, index, entities, organizedEntityIndexes);
+    if (organizedEntity) {
+      organizedEntity.organizedIndexes.forEach((organizedIndex) => {
+        organizedEntityIndexes.add(organizedIndex);
+      });
+
+      organizedEntities.push(organizedEntity);
+    }
+  });
+
+  return organizedEntities;
+}
+
+function organizeEntity(
+  entity: ApiMessageEntity,
+  index: number,
+  entities: ApiMessageEntity[],
+  organizedEntityIndexes: Set<number>,
+): IOrganizedEntity | undefined {
+  const { offset, length } = entity;
+  const organizedIndexes = new Set([index]);
+
+  if (organizedEntityIndexes.has(index)) {
+    return undefined;
+  }
+
+  // Determine any nested entities inside current entity
+  const nestedEntities: IOrganizedEntity[] = [];
+  const parsedNestedEntities = entities
+    .filter((e, i) => i > index && e.offset >= offset && e.offset < offset + length)
+    .map((e) => organizeEntity(e, entities.indexOf(e), entities, organizedEntityIndexes))
+    .filter(Boolean);
+
+  parsedNestedEntities.forEach((parsedEntity) => {
+    let isChanged = false;
+
+    parsedEntity.organizedIndexes.forEach((organizedIndex) => {
+      if (!isChanged && !organizedIndexes.has(organizedIndex)) {
+        isChanged = true;
+      }
+
+      organizedIndexes.add(organizedIndex);
+    });
+
+    if (isChanged) {
+      nestedEntities.push(parsedEntity);
+    }
+  });
+
+  return {
+    entity,
+    organizedIndexes,
+    nestedEntities,
+  };
+}
+
+function hasCanvasContent(entities: IOrganizedEntity[]): boolean {
+  return entities.some(({ entity, nestedEntities }) => (
+    entity.type === ApiMessageEntityTypes.Spoiler
+    || entity.type === ApiMessageEntityTypes.CustomEmoji
+    || hasCanvasContent(nestedEntities)
+  ));
+}
+
+function processEntity({
+  entity,
+  entityContent,
+  nestedEntityContent,
+  containerId,
+  asPreview,
+  isProtected,
+  observeIntersectionForLoading,
+  observeIntersectionForPlaying,
+  withTranslucentThumbs,
+  emojiSize,
+  hasCanvasContent: withCanvasContent,
+  cacheBuster,
+  forcePlayback,
+  noCustomEmojiPlayback,
+  isInSelectMode,
+  chatId,
+  messageId,
+  threadId,
+  maxTimestamp,
+}: {
+  entity: ApiMessageEntity;
+  entityContent: TextPart;
+  nestedEntityContent: TextPart[];
+  containerId?: string;
+  asPreview?: boolean;
+  isProtected?: boolean;
+  observeIntersectionForLoading?: ObserveFn;
+  observeIntersectionForPlaying?: ObserveFn;
+  withTranslucentThumbs?: boolean;
+  emojiSize?: number;
+  hasCanvasContent?: boolean;
+  cacheBuster?: string;
+  forcePlayback?: boolean;
+  noCustomEmojiPlayback?: boolean;
+  isInSelectMode?: boolean;
+  chatId?: string;
+  messageId?: number;
+  threadId?: ThreadId;
+  maxTimestamp?: number;
+}) {
+  const entityText = typeof entityContent === 'string' && entityContent;
+  const renderedContent = nestedEntityContent.length ? nestedEntityContent : entityContent;
+
+  function renderNestedMessagePart() {
+    return renderMessagePart({
+      content: renderedContent,
+      emojiSize,
+      asPreview,
+    });
+  }
+
+  if (!entityText) {
+    return renderNestedMessagePart();
+  }
+
+  if (asPreview) {
+    const text = renderNestedMessagePart();
+    if (entity.type === ApiMessageEntityTypes.Spoiler) {
+      return <Spoiler>{text}</Spoiler>;
+    }
+
+    if (entity.type === ApiMessageEntityTypes.CustomEmoji) {
+      return (
+        <CustomEmoji
+          alt={entityText}
+          key={cacheBuster ? `${cacheBuster}-${entity.offset}` : undefined}
+          documentId={entity.documentId}
+          size={emojiSize}
+          isSelectable
+          withSharedAnimation
+          observeIntersectionForLoading={observeIntersectionForLoading}
+          observeIntersectionForPlaying={observeIntersectionForPlaying}
+          withTranslucentThumb={withTranslucentThumbs}
+          forceAlways={forcePlayback}
+          noPlay={noCustomEmojiPlayback}
+        />
+      );
+    }
+
+    if (entity.type === ApiMessageEntityTypes.FormattedDate && entity.date) { // Old entities can have missing fields
+      return (
+        <FormattedDate sourceText={entityText} entity={entity} asPreview>{text}</FormattedDate>
+      );
+    }
+
+    return text;
+  }
+
+  switch (entity.type) {
+    case ApiMessageEntityTypes.Bold:
+      return <strong data-entity-type={entity.type}>{renderNestedMessagePart()}</strong>;
+    case ApiMessageEntityTypes.Blockquote:
+      return (
+        <Blockquote
+          canBeCollapsible={entity.canCollapse}
+          isToggleDisabled={isInSelectMode}
+          hasCanvasContent={withCanvasContent}
+          contentKey={cacheBuster}
+        >
+          {renderNestedMessagePart()}
+        </Blockquote>
+      );
+    case ApiMessageEntityTypes.BotCommand:
+      // No chat context (stories, gifts, etc.): nowhere safe to send it
+      if (!chatId) return renderNestedMessagePart();
+      return (
+        <a
+          onClick={(e) => handleBotCommandClick(e, chatId, threadId, messageId)}
+          className="text-entity-link"
+          dir="auto"
+          data-entity-type={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </a>
+      );
+    case ApiMessageEntityTypes.Hashtag: {
+      const [tag, username] = entityContent.split('@');
+      return (
+        <a
+          onClick={() => handleHashtagClick(tag, username)}
+          className="text-entity-link"
+          dir="auto"
+          data-entity-type={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </a>
+      );
+    }
+    case ApiMessageEntityTypes.Cashtag: {
+      const [tag, username] = entityContent.split('@');
+      return (
+        <a
+          onClick={() => handleHashtagClick(tag, username)}
+          className="text-entity-link"
+          dir="auto"
+          data-entity-type={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </a>
+      );
+    }
+    case ApiMessageEntityTypes.Code:
+      return (
+        <code
+          className={buildClassName('text-entity-code', 'clickable')}
+          onClick={handleCodeClick}
+          role="textbox"
+          tabIndex={0}
+          data-entity-type={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </code>
+      );
+    case ApiMessageEntityTypes.Email:
+      return (
+        <a
+          href={`mailto:${entityText}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-entity-link"
+          dir="auto"
+          data-entity-type={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </a>
+      );
+    case ApiMessageEntityTypes.Italic:
+      return <em data-entity-type={entity.type}>{renderNestedMessagePart()}</em>;
+    case ApiMessageEntityTypes.MentionName:
+      return (
+        <MentionLink userId={entity.userId}>
+          {renderNestedMessagePart()}
+        </MentionLink>
+      );
+    case ApiMessageEntityTypes.Mention:
+      return (
+        <MentionLink username={entityText}>
+          {renderNestedMessagePart()}
+        </MentionLink>
+      );
+    case ApiMessageEntityTypes.Phone:
+      return (
+        <a
+          href={`tel:${entityText}`}
+          className="text-entity-link"
+          dir="auto"
+          data-entity-type={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </a>
+      );
+    case ApiMessageEntityTypes.TonAddress:
+      return (
+        <TonAddressLink address={entityText} noCopy={isProtected}>{renderNestedMessagePart()}</TonAddressLink>
+      );
+    case ApiMessageEntityTypes.Pre:
+      return <CodeBlock text={entityText} language={entity.language} noCopy={isProtected} />;
+    case ApiMessageEntityTypes.Strike:
+      return <del data-entity-type={entity.type}>{renderNestedMessagePart()}</del>;
+    case ApiMessageEntityTypes.TextUrl:
+    case ApiMessageEntityTypes.Url:
+      return (
+        <SafeLink
+          url={getLinkUrl(entityText, entity)}
+          text={entityText}
+          chatId={chatId}
+          messageId={messageId}
+          threadId={threadId}
+          entityType={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </SafeLink>
+      );
+    case ApiMessageEntityTypes.Underline:
+      return <ins data-entity-type={entity.type}>{renderNestedMessagePart()}</ins>;
+    case ApiMessageEntityTypes.Timestamp:
+      if (!chatId || !messageId || !maxTimestamp || entity.timestamp > maxTimestamp) {
+        return renderNestedMessagePart();
+      }
+
+      return (
+        <a
+          onClick={() => handleTimecodeClick(chatId, messageId, threadId, entity.timestamp)}
+          className="text-entity-link"
+          dir="auto"
+          data-entity-type={entity.type}
+        >
+          {renderNestedMessagePart()}
+        </a>
+      );
+    case ApiMessageEntityTypes.Spoiler:
+      return (
+        <Spoiler containerId={containerId}>{renderNestedMessagePart()}</Spoiler>
+      );
+    case ApiMessageEntityTypes.CustomEmoji:
+      return (
+        <CustomEmoji
+          alt={entityText}
+          key={cacheBuster ? `${cacheBuster}-${entity.offset}` : undefined}
+          documentId={entity.documentId}
+          size={emojiSize}
+          isSelectable
+          withSharedAnimation
+          observeIntersectionForLoading={observeIntersectionForLoading}
+          observeIntersectionForPlaying={observeIntersectionForPlaying}
+          withTranslucentThumb={withTranslucentThumbs}
+          forceAlways={forcePlayback}
+          noPlay={noCustomEmojiPlayback}
+        />
+      );
+    case ApiMessageEntityTypes.FormattedDate:
+      return (
+        <FormattedDate
+          sourceText={entityText}
+          entity={entity}
+          chatId={chatId}
+          messageId={messageId}
+        >
+          {renderNestedMessagePart()}
+        </FormattedDate>
+      );
+    case ApiMessageEntityTypes.DiffInsert:
+      return (
+        <span className="text-entity-diff-insert" data-entity-type={entity.type}>
+          {renderNestedMessagePart()}
+        </span>
+      );
+    case ApiMessageEntityTypes.DiffReplace:
+      return (
+        <span className="text-entity-diff-replace" data-entity-type={entity.type}>
+          <span className="text-entity-diff-replace-old">{entity.oldText}</span>
+          <span className="text-entity-diff-replace-new">{renderNestedMessagePart()}</span>
+        </span>
+      );
+    case ApiMessageEntityTypes.DiffDelete:
+      return (
+        <span className="text-entity-diff-delete" data-entity-type={entity.type}>
+          {renderNestedMessagePart()}
+        </span>
+      );
+    default:
+      return renderNestedMessagePart();
+  }
+}
+
+function processEntityAsHtml(
+  entity: ApiMessageEntity,
+  entityContent: TextPart,
+  nestedEntityContent: TextPart[],
+) {
+  const rawEntityText = typeof entityContent === 'string' ? entityContent : undefined;
+
+  // Prevent adding newlines when editing
+  const content = entity.type === ApiMessageEntityTypes.Pre ? (entityContent as string).trimEnd() : entityContent;
+
+  const renderedContent = nestedEntityContent.length
+    ? (nestedEntityContent as string[]).join('')
+    : (renderText(content, ['escape_html', 'emoji_html', 'br_html']) as string[]).join('');
+
+  if (!rawEntityText) {
+    return renderedContent;
+  }
+
+  switch (entity.type) {
+    case ApiMessageEntityTypes.Bold:
+      return `<b>${renderedContent}</b>`;
+    case ApiMessageEntityTypes.Italic:
+      return `<i>${renderedContent}</i>`;
+    case ApiMessageEntityTypes.Underline:
+      return `<u>${renderedContent}</u>`;
+    case ApiMessageEntityTypes.Code:
+      return `<code class="text-entity-code">${renderedContent}</code>`;
+    case ApiMessageEntityTypes.Pre: {
+      const languageClass = entity.language
+        ? ` class="language-${escapeHtmlAttribute(entity.language)}"`
+        : '';
+      const code = (renderText(content, ['escape_html']) as string[]).join('');
+      return `<pre><code${languageClass}>${code}</code></pre>`;
+    }
+    case ApiMessageEntityTypes.Strike:
+      return `<del>${renderedContent}</del>`;
+    case ApiMessageEntityTypes.MentionName:
+      return `<a
+        class="text-entity-link"
+        data-entity-type="${ApiMessageEntityTypes.MentionName}"
+        data-user-id="${entity.userId}"
+        contenteditable="false"
+        dir="auto"
+      >${renderedContent}</a>`;
+    case ApiMessageEntityTypes.Url:
+    case ApiMessageEntityTypes.TextUrl:
+      return `<a
+        class="text-entity-link"
+        href="${getHtmlLinkUrl(rawEntityText, entity)}"
+        data-entity-type="${entity.type}"
+        dir="auto"
+      >${renderedContent}</a>`;
+    case ApiMessageEntityTypes.Spoiler:
+      return `<span
+        class="spoiler"
+        data-entity-type="${ApiMessageEntityTypes.Spoiler}"
+        >${renderedContent}</span>`;
+    case ApiMessageEntityTypes.CustomEmoji:
+      return buildCustomEmojiHtmlFromEntity(rawEntityText, entity);
+    case ApiMessageEntityTypes.Blockquote:
+      return `<blockquote
+        class="blockquote"
+        data-entity-type="${ApiMessageEntityTypes.Blockquote}"
+        >${renderedContent}</blockquote>`;
+    case ApiMessageEntityTypes.FormattedDate:
+      return buildFormattedDateHtml(renderedContent, entity);
+    default:
+      return renderedContent;
+  }
+}
+
+function getLinkUrl(entityContent: string, entity: ApiMessageEntity) {
+  const { type } = entity;
+  return type === ApiMessageEntityTypes.TextUrl && entity.url ? entity.url : entityContent;
+}
+
+function getHtmlLinkUrl(entityContent: string, entity: ApiMessageEntity) {
+  return escapeHtmlAttribute(ensureProtocol(getLinkUrl(entityContent, entity)));
+}
+
+export function handleBotCommandClick(
+  e: React.MouseEvent<HTMLAnchorElement>, chatId: string, threadId?: ThreadId, messageId?: number,
+) {
+  const global = getGlobal();
+  const chat = selectChat(global, chatId);
+  // Like official clients, only where a bot can read it
+  const hasBots = selectIsChatWithBot(global, chatId) || selectChatFullInfo(global, chatId)?.botIds?.length;
+  if (!chat || isChatChannel(chat) || !hasBots) return;
+
+  // Media viewer captions have no list thread, so take the message's own
+  const message = threadId === undefined && messageId ? selectChatMessage(global, chatId, messageId) : undefined;
+  const { closeMediaViewer, sendBotCommand } = getActions();
+  closeMediaViewer();
+  sendBotCommand({
+    command: e.currentTarget.innerText,
+    chatId,
+    threadId: threadId ?? (message ? selectThreadIdFromMessage(global, message) : MAIN_THREAD_ID),
+  });
+}
+
+export function handleHashtagClick(hashtag?: string, username?: string) {
+  if (!hashtag) return;
+  if (username) {
+    getActions().openChatByUsername({
+      username,
+      onChatChanged: {
+        action: 'searchHashtag',
+        payload: { hashtag },
+      },
+    });
+    return;
+  }
+  getActions().searchHashtag({ hashtag });
+}
+
+function handleCodeClick(e: React.MouseEvent<HTMLElement>) {
+  copyTextToClipboard(e.currentTarget.innerText);
+  getActions().showNotification({
+    message: {
+      key: 'TextCopied',
+    },
+  });
+}
+
+function handleTimecodeClick(
+  chatId: string, messageId: number, threadId: ThreadId | undefined, timestamp: number,
+) {
+  getActions().openMediaFromTimestamp({
+    chatId, messageId, threadId, timestamp,
+  });
+}

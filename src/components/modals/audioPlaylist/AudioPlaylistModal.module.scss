@@ -1,0 +1,378 @@
+.modal {
+  --modal-max-width: 22.5rem;
+}
+
+.content {
+  --modal-content-block-padding: 0rem;
+
+  overflow: hidden;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  max-height: calc(var(--modal-max-height) - var(--modal-header-height));
+  padding: 0 1rem 1rem;
+}
+
+.controlsContainer {
+  flex-shrink: 0;
+}
+
+.listContainer {
+  --playlist-preferred-height: min(24rem, calc(var(--playlist-track-count) * 3.75rem + 0.75rem));
+
+  flex: 1 1 var(--playlist-preferred-height);
+  min-height: 0;
+}
+
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.queueTitle {
+  overflow: hidden;
+  display: none;
+  flex-shrink: 0;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listIsland {
+  overflow: hidden;
+  flex: 1 1 0;
+
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.list {
+  overflow-y: auto;
+  height: 100%;
+  padding: 0.75rem;
+
+  :global(.Audio .media-loading) {
+    top: 0;
+    left: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (display-mode: picture-in-picture) {
+  .modal {
+    --modal-max-width: 100dvw;
+  }
+
+  .content {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .layout {
+    justify-content: center;
+    height: 100%;
+    max-height: none;
+    padding-block: 0.5rem;
+  }
+
+  .listContainer {
+    flex: 0 1 calc(var(--playlist-preferred-height) + 1.75rem);
+  }
+
+  .queueTitle {
+    display: block;
+  }
+}
+
+.compactQueue {
+  .listContainer {
+    flex: none;
+  }
+
+  .fullList {
+    display: none;
+  }
+
+  .listIsland {
+    flex: none;
+  }
+
+  .queueTitle {
+    display: block;
+  }
+}
+
+.noQueue .listContainer {
+  display: none;
+}
+
+.trackRow {
+  height: 3rem;
+  transition: color 150ms ease-out;
+
+  & + & {
+    margin-top: 0.75rem;
+  }
+}
+
+.activeTrackRow {
+  color: var(--color-primary);
+}
+
+.reorderRow {
+  position: relative;
+  padding-inline-end: 2.25rem;
+  border-radius: var(--border-radius-default);
+}
+
+.draggedRow {
+  --custom-cursor: grabbing;
+
+  will-change: transform;
+  cursor: var(--custom-cursor);
+  z-index: var(--z-modal-menu);
+  opacity: 0.95;
+
+  /* The playing ring overflows a track row, so the dragged backing reaches past it */
+  &::before {
+    content: "";
+
+    position: absolute;
+    z-index: -1;
+    inset: -0.625rem;
+
+    border-radius: var(--border-radius-default);
+
+    background: var(--color-background);
+    box-shadow: 0 0.25rem 1rem var(--color-default-shadow);
+  }
+}
+
+.dragHandle {
+  cursor: grab;
+
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  transform: translateY(-50%);
+
+  display: grid;
+  place-items: center;
+
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.25rem;
+
+  color: var(--color-text-secondary);
+
+  opacity: 0;
+
+  transition: opacity 150ms;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    opacity: 1;
+    outline: 0.125rem solid var(--color-primary);
+    outline-offset: 0.125rem;
+  }
+
+  .reorderRow:hover &,
+  .draggedRow & {
+    opacity: 1;
+  }
+
+  @media (pointer: coarse) {
+    touch-action: none;
+    opacity: 1;
+  }
+}
+
+.dragHandleIcon {
+  font-size: 1.5rem;
+}
+
+.trackCoverImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trackCoverIcon {
+  font-size: 1.5rem;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.nowPlaying {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.nowPlayingCover {
+  overflow: hidden;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+
+  width: 2.875rem;
+  height: 2.875rem;
+  border-radius: 0.625rem;
+
+  color: var(--color-white);
+
+  background-color: var(--color-primary);
+}
+
+.nowPlayingInfo {
+  overflow: hidden;
+}
+
+.nowPlayingTitle {
+  overflow: hidden;
+
+  font-size: 1.0625rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.375rem;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nowPlayingSubtitle {
+  overflow: hidden;
+
+  font-size: 0.9375rem;
+  line-height: 1.25rem;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seekWrapper {
+  position: relative;
+  height: 1rem;
+  border-radius: 0.25rem;
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.buttonsRow {
+  container-type: inline-size;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+  max-width: 20rem;
+  margin: 0 auto;
+}
+
+.transportButton {
+  width: min(3.5rem, 20cqi) !important;
+  height: 3.5rem !important;
+  color: var(--color-text) !important;
+
+  :global(.icon) {
+    font-size: min(1.75rem, 18cqi);
+  }
+}
+
+.playButton {
+  :global(.icon) {
+    font-size: min(1.875rem, 18cqi);
+  }
+}
+
+.sideButton {
+  width: min(2.75rem, 20cqi) !important;
+  height: 2.75rem !important;
+  color: var(--color-text) !important;
+
+  :global(.icon) {
+    font-size: min(1.5rem, 18cqi);
+  }
+}
+
+.sideButtonActive {
+  color: var(--color-primary) !important;
+}
+
+.transportButton,
+.sideButton {
+  background: none !important;
+
+  :global(.icon) {
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover:not(:disabled) :global(.icon) {
+    opacity: 0.72;
+  }
+}
+
+.orderMenu {
+  display: flex;
+  align-items: center;
+}
+
+.orderIconSlide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuItemSelected {
+  &,
+  :global(.icon) {
+    color: var(--color-primary) !important;
+  }
+}
+
+.profileButton {
+  height: 3rem;
+  margin-top: 1rem;
+  border-radius: 1.5rem;
+
+  font-size: 0.9375rem;
+  text-transform: none;
+}
+
+.profileButtonSlide {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.profileButtonIcon {
+  font-size: 1.25rem;
+}

@@ -1,0 +1,113 @@
+// `--message-code-dark` is 1 on dark code backgrounds and 0 on light ones
+@function select-code-color($light, $dark) {
+  @return color-mix(in srgb, #{$dark} calc(var(--message-code-dark) * 100%), #{$light});
+}
+
+// Light code shares the quote tint, so it follows the peer color of the bar
+@mixin code-surface {
+  --code-background: #{select-code-color(var(--accent-background-color), #00000080)};
+
+  background-color: var(--code-background);
+}
+
+@mixin code-highlight-theme {
+  --color-type: #{select-code-color(#0053d4, #56b6c2)};
+  --color-keyword: #{select-code-color(#388e22, #c678dd)};
+  --color-class: #{select-code-color(#3e6c20, #e06c75)};
+  --color-string: #{select-code-color(#9a1111, #98c379)};
+  --color-template: #{select-code-color(#9a5334, #d19a66)};
+  --color-selector: #{select-code-color(#9a5334, #e06c75)};
+  --color-function: #{select-code-color(#a753b7, #61aeee)};
+  --color-comment: #{select-code-color(#616161, #9da5b4)};
+  --color-section: #{select-code-color(#9a1111, #e06c75)};
+  --color-variable: #{select-code-color(#bd63c5, #d19a66)};
+  --color-attribute: #{select-code-color(#276b8f, #d19a66)};
+  --color-link: #{select-code-color(#276b8f, #d19a66)};
+  --color-tag: #{select-code-color(#000000, #e06c75)};
+}
+
+@mixin code-highlight-tokens {
+  :global(.hljs-keyword),
+  :global(.hljs-literal),
+  :global(.hljs-symbol),
+  :global(.hljs-name) {
+    color: var(--color-keyword);
+  }
+
+  :global(.hljs-link) {
+    color: var(--color-link);
+    text-decoration: underline;
+  }
+
+  :global(.hljs-built_in),
+  :global(.hljs-type) {
+    color: var(--color-type);
+  }
+
+  :global(.hljs-number),
+  :global(.hljs-class) {
+    color: var(--color-class);
+  }
+
+  :global(.hljs-string),
+  :global(.hljs-meta) :global(.hljs-string) {
+    color: var(--color-string);
+  }
+
+  :global(.hljs-regexp),
+  :global(.hljs-template-tag) {
+    color: var(--color-template);
+  }
+
+  :global(.hljs-subst),
+  :global(.hljs-function),
+  :global(.hljs-title),
+  :global(.hljs-params),
+  :global(.hljs-formula) {
+    color: var(--color-function);
+  }
+
+  :global(.hljs-comment),
+  :global(.hljs-quote) {
+    font-style: italic;
+    color: var(--color-comment);
+  }
+
+  :global(.hljs-meta),
+  :global(.hljs-meta) :global(.hljs-keyword),
+  :global(.hljs-tag),
+  :global(.hljs-doctag) {
+    color: var(--color-tag);
+  }
+
+  :global(.hljs-variable),
+  :global(.hljs-template-variable) {
+    color: var(--color-variable);
+  }
+
+  :global(.hljs-attr),
+  :global(.hljs-attribute) {
+    color: var(--color-attribute);
+  }
+
+  :global(.hljs-section) {
+    color: var(--color-section);
+  }
+
+  :global(.hljs-emphasis) {
+    font-style: italic;
+  }
+
+  :global(.hljs-strong) {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  :global(.hljs-bullet),
+  :global(.hljs-selector-tag),
+  :global(.hljs-selector-id),
+  :global(.hljs-selector-class),
+  :global(.hljs-selector-attr),
+  :global(.hljs-selector-pseudo) {
+    color: var(--color-selector);
+  }
+}

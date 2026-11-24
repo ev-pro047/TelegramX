@@ -1,0 +1,396 @@
+import { memo, useEffect, useRef, useState } from '../../../lib/teact/teact';
+import { getActions, withGlobal } from '../../../global';
+
+import type { ApiMediaExtendedPreview, ApiVideo } from '../../../api/types';
+import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
+
+import {
+  getMediaDimensions, getMediaFormat, getMediaThumbUri, getMediaTransferState, getPhotoMediaHash, getVideoMediaHash,
+} from '../../../global/helpers';
+import buildClassName from '../../../util/buildClassName';
+import buildStyle from '../../../util/buildStyle';
+import { formatMediaDuration } from '../../../util/dates/duration';
+import * as mediaLoader from '../../../util/mediaLoader';
+import { REM } from '../../common/helpers/mediaDimensions';
+
+import useUnsupportedMedia from '../../../hooks/media/useUnsupportedMedia';
+import useCurrentOrPrev from '../../../hooks/useCurrentOrPrev';
+import useFlag from '../../../hooks/useFlag';
+import { useIsIntersecting } from '../../../hooks/useIntersectionObserver';
+import useLastCallback from '../../../hooks/useLastCallback';
+import useMedia from '../../../hooks/useMedia';
+import useMediaTransition from '../../../hooks/useMediaTransition';
+import useMediaWithLoadProgress from '../../../hooks/useMediaWithLoadProgress';
+import usePreviousDeprecated from '../../../hooks/usePreviousDeprecated';
+import useShowTransition from '../../../hooks/useShowTransition';
+import useBlurredMediaThumbRef from './hooks/useBlurredMediaThumbRef';
+
+import Icon from '../../common/icons/Icon';
+import MediaSpoiler from '../../common/MediaSpoiler';
+import SensitiveContentConfirmModal from '../../common/SensitiveContentConfirmModal';
+import EditedVideoPreview from '../../ui/mediaEditor/EditedVideoPreview.async';
+import OptimizedVideo from '../../ui/OptimizedVideo';
+import ProgressSpinner from '../../ui/ProgressSpinner';
+import MediaBadge from './MediaBadge';
+
+import mediaStyles from './media.module.scss';
+import styles from './Video.module.scss';
+
+export type OwnProps<T> = {
+  id?: string;
+  video: ApiVideo | ApiMediaExtendedPreview;
+  lastPlaybackTimestamp?: number;
+  canAutoLoad?: boolean;
+  canAutoPlay?: boolean;
+  uploadProgress?: number;
+  layout?: 'intrinsic' | 'fill';
+  noSpoilerReveal?: boolean;
+  isDownloading?: boolean;
+  isProtected?: boolean;
+  className?: string;
+  clickArg?: T;
+  isMediaNsfw?: boolean;
+  observeIntersectionForLoading?: ObserveFn;
+  observeIntersectionForPlaying?: ObserveFn;
+  onClick?: (arg: T, e: React.MouseEvent<HTMLElement>) => void;
+  onCancelUpload?: (arg: T) => void;
+};
+
+type StateProps = {
+  needsAgeVerification?: boolean;
+};
+
+const EDITED_PREVIEW_MAX_SIDE = 30 * REM;
+
+const Video = <T,>({
+  id,
+  video,
+  canAutoLoad,
+  canAutoPlay,
+  uploadProgress,
+  layout = 'intrinsic',
+  noSpoilerReveal,
+  isDownloading,
+  isProtected,
+  className,
+  lastPlaybackTimestamp,
+  clickArg,
+  isMediaNsfw,
+  observeIntersectionForLoading,
+  observeIntersectionForPlaying,
+  onClick,
+  onCancelUpload,
+  needsAgeVerification,
+}: OwnProps<T> & StateProps) => {
+  const { cancelMediaDownload, updateContentSettings, openAgeVerificationModal } = getActions();
+  const ref = useRef<HTMLDivElement>();
+  const videoRef = useRef<HTMLVideoElement>();
+  const [isNsfwModalOpen, openNsfwModal, closeNsfwModal] = useFlag();
+  const [shouldAlwaysShowNsfw, setShouldAlwaysShowNsfw] = useState(false);
+
+  const isPaidPreview = video.mediaType === 'extendedMediaPreview';
+  const { width, height } = getMediaDimensions(video);
+
+  const localBlobUrl = !isPaidPreview ? video.blobUrl : undefined;
+  const editPreview = useCurrentOrPrev(video.mediaType === 'video' ? video.editPreview : undefined, true);
+
+  const shouldShowSpoiler = isPaidPreview || video.isSpoiler || isMediaNsfw;
+  const [isSpoilerShown, showSpoiler, hideSpoiler] = useFlag(shouldShowSpoiler);
+
+  useEffect(() => {
+    if (shouldShowSpoiler) {
+      showSpoiler();
+    } else {
+      hideSpoiler();
+    }
+  }, [shouldShowSpoiler]);
+
+  const handleNsfwConfirm = useLastCallback(() => {
+    closeNsfwModal();
+    hideSpoiler();
+
+    if (shouldAlwaysShowNsfw) {
+      updateContentSettings({ isSensitiveEnabled: true });
+    }
+  });
+
+  const isIntersectingForLoading = useIsIntersecting(ref, observeIntersectionForLoading);
+  const isIntersectingForPlaying = (
+    useIsIntersecting(ref, observeIntersectionForPlaying)
+    && isIntersectingForLoading
+  );
+  const wasIntersectedRef = useRef(isIntersectingForLoading);
+  if (isIntersectingForPlaying && !wasIntersectedRef.current) {
+    wasIntersectedRef.current = true;
+  }
+
+  const [isLoadAllowed, setIsLoadAllowed] = useState(canAutoLoad);
+  const shouldLoad = Boolean(isLoadAllowed && isIntersectingForLoading && !isPaidPreview);
+  const cover = video.mediaType === 'video' ? video.cover : undefined;
+  const hasCover = Boolean(cover);
+  const [isPlayAllowed, setIsPlayAllowed] = useState(Boolean(canAutoPlay && !isSpoilerShown));
+  const [isHovered, markHovered, unmarkHovered] = useFlag();
+  const canPlay = hasCover
+    ? Boolean(canAutoPlay ? isHovered && !isSpoilerShown : isPlayAllowed)
+    : isPlayAllowed;
+
+  const fullMediaHash = !isPaidPreview ? getVideoMediaHash(video, 'inline') : undefined;
+  const [isFullMediaPreloaded] = useState(Boolean(fullMediaHash && mediaLoader.getFromMemory(fullMediaHash)));
+  const { mediaData, loadProgress } = useMediaWithLoadProgress(
+    fullMediaHash,
+    !shouldLoad,
+    !isPaidPreview ? getMediaFormat(video, 'inline') : undefined,
+  );
+  const fullMediaData = localBlobUrl || mediaData;
+  const [isPlayerReady, markPlayerReady] = useFlag();
+  const [isEditPreviewReady, markEditPreviewReady] = useFlag();
+  const isMediaReady = isPlayerReady || Boolean(editPreview && isEditPreviewReady);
+
+  const thumbDataUri = getMediaThumbUri(cover ?? video);
+  const hasThumb = Boolean(thumbDataUri);
+  const withBlurredBackground = layout !== 'fill';
+
+  const isInline = fullMediaData && wasIntersectedRef.current;
+
+  const isUnsupported = useUnsupportedMedia(videoRef, true, !isInline);
+
+  const previewMediaHash = isPaidPreview ? undefined
+    : cover ? getPhotoMediaHash(cover, 'preview') : getVideoMediaHash(video, 'preview');
+  const [isPreviewPreloaded] = useState(Boolean(previewMediaHash && mediaLoader.getFromMemory(previewMediaHash)));
+  const canLoadPreview = isIntersectingForLoading;
+  const previewBlobUrl = useMedia(previewMediaHash, !canLoadPreview)
+    || cover?.blobUrl || (video.mediaType === 'video' ? video.previewBlobUrl : undefined);
+  const shouldHidePreview = isMediaReady && !isUnsupported && (!hasCover || canPlay);
+  const { ref: previewRef } = useMediaTransition<HTMLImageElement>({
+    hasMediaData: Boolean((hasThumb || previewBlobUrl) && !shouldHidePreview),
+  });
+
+  const noThumb = Boolean(!hasThumb || previewBlobUrl || shouldHidePreview);
+  const thumbRef = useBlurredMediaThumbRef(cover ?? video, noThumb);
+  useMediaTransition({ ref: thumbRef, hasMediaData: !noThumb });
+  const blurredBackgroundRef = useBlurredMediaThumbRef(video, !withBlurredBackground);
+
+  const { loadProgress: downloadProgress } = useMediaWithLoadProgress(
+    !isPaidPreview ? getVideoMediaHash(video, 'download') : undefined,
+    !isDownloading,
+    !isPaidPreview ? getMediaFormat(video, 'download') : undefined,
+  );
+
+  const { isUploading, isTransferring, transferProgress } = getMediaTransferState(
+    uploadProgress || (isDownloading ? downloadProgress : loadProgress),
+    (shouldLoad && !editPreview && !isPlayerReady && !isFullMediaPreloaded) || isDownloading,
+    uploadProgress !== undefined,
+  );
+
+  const wasLoadDisabled = usePreviousDeprecated(isLoadAllowed) === false;
+  const {
+    ref: spinnerRef,
+    shouldRender: shouldRenderSpinner,
+  } = useShowTransition({
+    isOpen: isTransferring && !isUnsupported && (isUploading || !isSpoilerShown),
+    noMountTransition: wasLoadDisabled,
+    withShouldRender: true,
+  });
+  const {
+    ref: playButtonRef,
+  } = useShowTransition({
+    isOpen: Boolean((isLoadAllowed || fullMediaData) && !canPlay && !shouldRenderSpinner),
+  });
+  const {
+    ref: transferProgressRef,
+    shouldRender: shouldRenderTransferProgress,
+  } = useShowTransition({
+    isOpen: isTransferring && (!isUnsupported || isDownloading),
+    noMountTransition: wasLoadDisabled,
+    withShouldRender: true,
+  });
+
+  const [playProgress, setPlayProgress] = useState<number>(0);
+  const handleTimeUpdate = useLastCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
+    setPlayProgress(Math.max(0, e.currentTarget.currentTime - 1));
+  });
+
+  const duration = (Number.isFinite(videoRef.current?.duration) && !isUnsupported
+    ? videoRef.current?.duration : video.duration) || 0;
+
+  const handleClick = useLastCallback((e: React.MouseEvent<HTMLElement, MouseEvent>, isFromSpinner?: boolean) => {
+    if (isUploading) {
+      onCancelUpload?.(clickArg!);
+      return;
+    }
+
+    if (isSpoilerShown && noSpoilerReveal) {
+      onClick?.(clickArg!, e);
+      return;
+    }
+
+    if (fullMediaData && !isPlayAllowed) {
+      setIsPlayAllowed(true);
+    }
+
+    // The spoiler hides loading controls, so the first click only reveals the media
+    if (isSpoilerShown) {
+      if (isMediaNsfw) {
+        if (needsAgeVerification) {
+          openAgeVerificationModal();
+          return;
+        }
+        openNsfwModal();
+        return;
+      }
+      hideSpoiler();
+      return;
+    }
+
+    if (!isPaidPreview && isDownloading) {
+      cancelMediaDownload({ media: video });
+      return;
+    }
+
+    if (!fullMediaData) {
+      setIsLoadAllowed((isAllowed) => !isAllowed);
+      return;
+    }
+
+    if (isFromSpinner && shouldLoad && !isPlayerReady && !isFullMediaPreloaded) {
+      setIsLoadAllowed(false);
+      e.stopPropagation();
+      return;
+    }
+
+    onClick?.(clickArg!, e);
+  });
+
+  const handleClickOnSpinner = useLastCallback(
+    (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+      handleClick(e, true);
+    },
+  );
+
+  const componentClassName = buildClassName(
+    'media-inner dark',
+    mediaStyles.frame,
+    mediaStyles[layout],
+    !isUploading && 'interactive',
+    isSpoilerShown && mediaStyles.withSpoiler,
+    className,
+  );
+
+  const style = buildStyle(
+    `--media-width: ${width}px`,
+    `--media-aspect-ratio: ${width / height}`,
+  );
+
+  return (
+    <div
+      ref={ref}
+      id={id}
+      className={componentClassName}
+      style={style}
+      onClick={isUploading ? undefined : (e) => handleClick(e)}
+      onMouseEnter={hasCover ? markHovered : undefined}
+      onMouseLeave={hasCover ? unmarkHovered : undefined}
+    >
+      {withBlurredBackground && (
+        <canvas ref={blurredBackgroundRef} className="thumbnail blurred-bg" />
+      )}
+      {isInline && (
+        <OptimizedVideo
+          ref={videoRef}
+          src={fullMediaData}
+          className="full-media"
+          canPlay={canPlay && isIntersectingForPlaying && !isUnsupported}
+          defaultMuted
+          muted
+          loop
+          playsInline
+          disablePictureInPicture
+          draggable={!isProtected}
+          onTimeUpdate={handleTimeUpdate}
+          onReady={markPlayerReady}
+        />
+      )}
+      {editPreview && wasIntersectedRef.current && !isPlayerReady && (
+        <EditedVideoPreview
+          className="full-media"
+          blobUrl={editPreview.blobUrl}
+          mimeType={editPreview.mimeType}
+          editDocument={editPreview.document}
+          maxSide={Math.min(Math.max(width, height), EDITED_PREVIEW_MAX_SIDE)}
+          canPlay={canPlay && isIntersectingForPlaying}
+          onReady={markEditPreviewReady}
+        />
+      )}
+      {previewBlobUrl && (
+        <img
+          ref={previewRef}
+          src={previewBlobUrl}
+          className="thumbnail"
+          alt=""
+          draggable={!isProtected}
+        />
+      )}
+      {hasThumb && !isPreviewPreloaded && (
+        <canvas ref={thumbRef} className="thumbnail" />
+      )}
+      {isProtected && <span className="protector" />}
+      <Icon
+        ref={playButtonRef}
+        name="play"
+        className={buildClassName(mediaStyles.controlButton, mediaStyles.playButton)}
+      />
+      <MediaSpoiler
+        isVisible={isSpoilerShown}
+        withAnimation={noSpoilerReveal ? undefined : true}
+        thumbDataUri={thumbDataUri}
+        isNsfw={isMediaNsfw}
+        width={width}
+        height={height}
+        className="media-spoiler"
+      />
+      {shouldRenderSpinner && (
+        <div ref={spinnerRef} className={buildClassName('media-loading', mediaStyles.loading)}>
+          <ProgressSpinner
+            progress={transferProgress}
+            onClick={handleClickOnSpinner}
+          />
+        </div>
+      )}
+      {!isLoadAllowed && !fullMediaData && (
+        <Icon name="download" className={buildClassName(mediaStyles.controlButton, mediaStyles.downloadButton)} />
+      )}
+      {shouldRenderTransferProgress ? (
+        <MediaBadge key="transfer-progress" ref={transferProgressRef} className="message-transfer-progress">
+          {(isUploading || isDownloading) ? `${Math.round(transferProgress * 100)}%` : '...'}
+        </MediaBadge>
+      ) : (
+        <MediaBadge key="duration" className="message-media-duration">
+          {!isPaidPreview && video.isGif ? 'GIF' : formatMediaDuration(Math.max(duration - playProgress, 0))}
+          {isUnsupported && <Icon name="message-failed" className={styles.playbackFailed} />}
+        </MediaBadge>
+      )}
+      {Boolean(lastPlaybackTimestamp) && (
+        <div
+          className="message-media-last-progress"
+          style={`--_progress: ${Math.floor((lastPlaybackTimestamp / duration) * 100)}%`}
+        />
+      )}
+      <SensitiveContentConfirmModal
+        isOpen={isNsfwModalOpen}
+        onClose={closeNsfwModal}
+        shouldAlwaysShow={shouldAlwaysShowNsfw}
+        onAlwaysShowChanged={setShouldAlwaysShowNsfw}
+        confirmHandler={handleNsfwConfirm}
+      />
+    </div>
+  );
+};
+
+export default memo(withGlobal((global): Complete<StateProps> => {
+  const appConfig = global.appConfig;
+  const needsAgeVerification = appConfig.needAgeVideoVerification;
+
+  return {
+    needsAgeVerification,
+  };
+})(Video));

@@ -1,0 +1,210 @@
+.root {
+  --click-shift-x: 0px;
+  --click-shift-y: 0px;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+}
+
+@property --reveal-radius {
+  inherits: false;
+  initial-value: 0%;
+  syntax: "<percentage>";
+}
+
+// The cut skips particles, which leave with their own ripple after it.
+// A gradient needs no image to load, so the media does not flash unmasked on the first reveal.
+.mask-animation:global(.closing) {
+  .canvas,
+  .dots {
+    mask-image:
+      radial-gradient(
+        circle at calc(50% + var(--click-shift-x)) calc(50% + var(--click-shift-y)),
+        transparent calc(var(--reveal-radius) - 4%),
+        #000000 var(--reveal-radius)
+      );
+
+    :global(body:not(.no-page-transitions)) & {
+      // A quadratic ease-in, matching the particle ripple of the GPU canvas worker
+      animation: 500ms cubic-bezier(0.3333, 0, 0.6667, 0.3333) circle-cut forwards;
+    }
+  }
+
+  .dots {
+    transform: scale(1.2);
+  }
+
+  .nsfw {
+    opacity: 0;
+  }
+}
+
+// Dims the blurred media under both particles and fallback dots, like Telegram Android
+.canvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  // Fallback before the blurred media is drawn
+  background-color: var(--color-text-secondary);
+  filter: brightness(0.9);
+}
+
+.nsfw {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+
+  color: white;
+
+  background-color: rgba(0, 0, 0, 0.25);
+
+  transition: opacity 250ms ease;
+}
+
+.nsfwIcon {
+  font-size: 1.25rem;
+}
+
+.particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+}
+
+.dots {
+  --x-direction: var(--background-size);
+  --y-direction: 0;
+  --background-url:
+    image-set(
+      url("../../assets/spoilers/turbulence_1x.avif") 1x,
+      url("../../assets/spoilers/turbulence_2x.avif") 2x,
+      url("../../assets/spoilers/turbulence_3x.avif") 3x
+    );
+  --background-size: 256px;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: calc(50% + var(--click-shift-x)) calc(50% + var(--click-shift-y));
+
+  width: 100%;
+  height: 100%;
+
+  background: var(--background-url);
+  background-size: var(--background-size) var(--background-size);
+
+  transition: transform 500ms ease-in;
+
+  &::before {
+    --x-direction: 0;
+    --y-direction: var(--background-size);
+
+    content: "";
+
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background-image: var(--background-url);
+    background-position: calc(var(--x-direction) / 2) calc(var(--y-direction) / 2);
+    background-size: var(--background-size) var(--background-size);
+
+    animation: 2s linear -0.8s infinite opacity-breath;
+  }
+
+  &::after {
+    --x-direction: calc(-1 * var(--background-size));
+    --y-direction: calc(-1 * var(--background-size));
+
+    content: "";
+
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background-image: var(--background-url);
+    background-position: calc(var(--x-direction) / 2) calc(var(--y-direction) / 2);
+    background-size: var(--background-size) var(--background-size);
+
+    animation: 2s linear -1.5s infinite opacity-breath;
+  }
+}
+
+:global(body:not(.no-page-transitions)) .dots {
+  animation: 20s linear infinite;
+  animation-name: dots-animation;
+
+  &::before {
+    animation: 21s linear -7s infinite;
+    animation-name: dots-animation;
+  }
+
+  &::after {
+    animation: 22s linear -14s infinite;
+    animation-name: dots-animation;
+  }
+}
+
+:global(body.in-background) .dots {
+  &, &::before, &::after {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes dots-animation {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: var(--x-direction) var(--y-direction);
+  }
+}
+
+@keyframes circle-cut {
+  0% {
+    --reveal-radius: 0%;
+  }
+
+  // Past the farthest corner by the soft edge, so nothing of the spoiler stays
+  100% {
+    --reveal-radius: 104%;
+  }
+}
+
+@keyframes opacity-breath {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.1;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}

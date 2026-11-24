@@ -1,0 +1,54 @@
+.overlay {
+  pointer-events: none;
+
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  opacity: 0;
+
+  transition: opacity 0.15s ease-in-out;
+}
+
+.copy, .wrap {
+  cursor: var(--custom-cursor, pointer);
+
+  display: flex;
+
+  margin: 0.125rem;
+  padding: 0.125rem;
+  border-radius: 0.125rem;
+
+  font-size: 1.25rem;
+
+  transition: background-color var(--message-color-transition-duration, 0.15s) ease-in-out;
+
+  &:hover, &.wrapOn {
+    background-color: var(--code-background);
+  }
+}
+
+.content {
+  pointer-events: auto;
+
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0.125rem;
+  border-bottom-left-radius: 0.25rem;
+
+  // Opaque copy of the code surface, so scrolled code does not show through
+  background:
+    linear-gradient(var(--code-background), var(--code-background)),
+    var(--color-background);
+
+  &.hidden {
+    display: none;
+  }
+}

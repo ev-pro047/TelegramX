@@ -1,0 +1,375 @@
+import { memo, useEffect } from '../../../lib/teact/teact';
+import { getActions, withGlobal } from '../../../global';
+
+import type { ApiStarsAmount, ApiTonAmount } from '../../../api/types';
+import { SettingsScreens } from '../../../types';
+
+import {
+  FAQ_URL, MIN_SHOWN_WALLET_NANOS, PRIVACY_URL, TON_CURRENCY_CODE,
+} from '../../../config';
+import { formatStarsAmount } from '../../../global/helpers/payments';
+import {
+  selectIsCurrentUserFrozen,
+  selectIsGiveawayGiftsPurchaseAvailable,
+  selectIsPremiumPurchaseBlocked,
+  selectIsWalletAvailable,
+} from '../../../global/selectors';
+import { IS_ANDROID, IS_IOS } from '../../../util/browser/windowEnvironment';
+import buildClassName from '../../../util/buildClassName';
+import { formatStarsAsIcon, formatTonAsIcon, formatTonNumber } from '../../../util/localization/format';
+
+import useAppLayout from '../../../hooks/useAppLayout';
+import useHistoryBack from '../../../hooks/useHistoryBack';
+import useLang from '../../../hooks/useLang';
+
+import ChatExtra from '../../common/profile/ChatExtra';
+import ProfileInfo from '../../common/profile/ProfileInfo';
+import Island from '../../gili/layout/Island';
+import ListItem from '../../ui/ListItem';
+
+import styles from './SettingsMain.module.scss';
+
+type OwnProps = {
+  isActive?: boolean;
+  onReset: () => void;
+};
+
+type StateProps = {
+  sessionCount: number;
+  currentUserId?: string;
+  canBuyPremium?: boolean;
+  isGiveawayAvailable?: boolean;
+  isWalletAvailable?: boolean;
+  isCurrentUserFrozen?: boolean;
+  walletBalance?: bigint;
+  starsBalance?: ApiStarsAmount;
+  tonBalance?: ApiTonAmount;
+};
+
+const SettingsMain = ({
+  isActive,
+  currentUserId,
+  sessionCount,
+  canBuyPremium,
+  isGiveawayAvailable,
+  isWalletAvailable,
+  isCurrentUserFrozen,
+  walletBalance,
+  starsBalance,
+  tonBalance,
+  onReset,
+}: OwnProps & StateProps) => {
+  const {
+    loadMoreProfilePhotos,
+    loadWalletState,
+    openPremiumModal,
+    openUrl,
+    openGiftRecipientPicker,
+    openStarsBalanceModal,
+    openWalletModal,
+    openSettingsScreen,
+    openSettingsConfirmation,
+  } = getActions();
+
+  const lang = useLang();
+
+  const { isMobile } = useAppLayout();
+  const isMobileDevice = isMobile && (IS_IOS || IS_ANDROID);
+
+  useEffect(() => {
+    if (currentUserId) {
+      loadMoreProfilePhotos({ peerId: currentUserId, isPreload: true });
+    }
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (isActive && isWalletAvailable && !isCurrentUserFrozen) {
+      loadWalletState();
+    }
+  }, [isActive, isWalletAvailable, isCurrentUserFrozen]);
+
+  useHistoryBack({
+    isActive,
+    onBack: onReset,
+  });
+
+  return (
+    <div className={buildClassName(styles.root, 'settings-main-scroll', 'custom-scroll')}>
+      <div className={styles.selfProfile}>
+        {currentUserId && (
+          <ProfileInfo
+            peerId={currentUserId}
+            isActive={Boolean(isActive)}
+            canPlayVideo={Boolean(isActive)}
+            isForSettings
+          />
+        )}
+        {currentUserId && (
+          <ChatExtra
+            chatOrUserId={currentUserId}
+            isInSettings
+          />
+        )}
+      </div>
+      <div className={styles.menuSection}>
+        {isWalletAvailable && (
+          <Island>
+            <ListItem
+              icon="gram-filled"
+              iconBg="blue"
+              narrow
+              onClick={() => openWalletModal()}
+            >
+              {lang('WalletMenuItem')}
+              {walletBalance !== undefined && walletBalance >= MIN_SHOWN_WALLET_NANOS && (
+                <span className="settings-item__current-value">
+                  {formatTonAsIcon(lang, formatTonNumber(lang, walletBalance, true), {
+                    withIconLast: true,
+                    className: styles.balanceGem,
+                  })}
+                </span>
+              )}
+            </ListItem>
+          </Island>
+        )}
+
+        <Island>
+          <ListItem
+            icon="account-filled"
+            iconBg="blue"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.EditProfile })}
+          >
+            <span className="title">{lang('SettingsAccount')}</span>
+            <span className="subtitle">{lang('SettingsAccountDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="settings-filled"
+            iconBg="orange"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.General })}
+          >
+            <span className="title">{lang('TelegramGeneralSettingsViewController')}</span>
+            <span className="subtitle">{lang('SettingsGeneralDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="notifications-filled"
+            iconBg="red"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Notifications })}
+          >
+            <span className="title">{lang('Notifications')}</span>
+            <span className="subtitle">{lang('SettingsNotificationsDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="lock-filled"
+            iconBg="gray"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Privacy })}
+          >
+            <span className="title">{lang('PrivacySettings')}</span>
+            <span className="subtitle">{lang('SettingsPrivacyDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="piechart-filled"
+            iconBg="green"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.DataStorage })}
+          >
+            <span className="title">{lang('DataSettings')}</span>
+            <span className="subtitle">{lang('SettingsDataDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="folder-filled"
+            iconBg="blue"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Folders })}
+          >
+            <span className="title">{lang('Filters')}</span>
+            <span className="subtitle">{lang('SettingsFoldersDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="animations-filled"
+            iconBg="purple"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Performance })}
+          >
+            <span className="title">{lang('MenuAnimations')}</span>
+            <span className="subtitle">{lang('SettingsPerformanceDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="smile-filled"
+            iconBg="pink"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Stickers })}
+          >
+            <span className="title">{lang('MenuStickers')}</span>
+            <span className="subtitle">{lang('SettingsStickersDesc')}</span>
+          </ListItem>
+
+          <ListItem
+            icon="web-filled"
+            iconBg="purple"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Language })}
+          >
+            <span className="title">{lang('Language')}</span>
+            <span className="subtitle">
+              {lang('SettingsLanguageDesc', { language: lang.languageInfo?.nativeName || lang.rawCode })}
+            </span>
+          </ListItem>
+
+          {!isMobileDevice && (
+            <ListItem
+              icon="keyboard-filled"
+              iconBg="gray"
+              multiline
+              narrow
+              onClick={() => openSettingsScreen({ screen: SettingsScreens.KeyboardShortcuts })}
+            >
+              <span className="title">{lang('KeyboardShortcuts')}</span>
+              <span className="subtitle">{lang('KeyboardShortcutsDesc')}</span>
+            </ListItem>
+          )}
+
+          <ListItem
+            icon="devices-filled"
+            iconBg="blue"
+            multiline
+            narrow
+            rightElement={sessionCount > 0
+              ? <span className="settings-item__current-value">{sessionCount}</span>
+              : undefined}
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.ActiveSessions })}
+          >
+            <span className="title">{lang('SessionsTitle')}</span>
+            <span className="subtitle">{lang('SettingsSessionsDesc')}</span>
+          </ListItem>
+        </Island>
+
+        <Island>
+          {canBuyPremium && (
+            <ListItem
+              icon="star"
+              iconBg="premium"
+              narrow
+              onClick={() => openPremiumModal()}
+            >
+              {lang('TelegramPremium')}
+            </ListItem>
+          )}
+
+          <ListItem
+            icon="stars-filled"
+            iconBg="orange"
+            narrow
+            onClick={() => openStarsBalanceModal({})}
+          >
+            {lang('MenuStars')}
+            {Boolean(starsBalance) && (
+              <span className="settings-item__current-value">
+                {formatStarsAsIcon(lang, formatStarsAmount(lang, starsBalance), {
+                  asFont: true,
+                  withIconLast: true,
+                  className: styles.balanceStar,
+                })}
+              </span>
+            )}
+          </ListItem>
+
+          <ListItem
+            icon="earnings"
+            iconBg="blue"
+            narrow
+            onClick={() => openStarsBalanceModal({ currency: TON_CURRENCY_CODE })}
+          >
+            {lang('GramEarnings')}
+            {Boolean(tonBalance) && (
+              <span className="settings-item__current-value">
+                {formatTonAsIcon(lang, tonBalance.amount, {
+                  withIconLast: true,
+                  className: styles.balanceGem,
+                })}
+              </span>
+            )}
+          </ListItem>
+
+          {isGiveawayAvailable && (
+            <ListItem
+              icon="gift-filled"
+              iconBg="orange"
+              narrow
+              onClick={() => openGiftRecipientPicker()}
+            >
+              {lang('MenuSendGift')}
+            </ListItem>
+          )}
+        </Island>
+
+        <Island>
+          <ListItem
+            icon="support-filled"
+            iconBg="red"
+            narrow
+            onClick={() => openSettingsConfirmation({ confirmation: 'askQuestion' })}
+          >
+            {lang('AskAQuestion')}
+          </ListItem>
+          <ListItem
+            icon="help-filled"
+            iconBg="blue"
+            narrow
+            onClick={() => openUrl({ url: FAQ_URL })}
+          >
+            {lang('MenuTelegramFaq')}
+          </ListItem>
+          <ListItem
+            icon="privacy-policy-filled"
+            iconBg="green"
+            narrow
+            onClick={() => openUrl({ url: PRIVACY_URL })}
+          >
+            {lang('MenuPrivacyPolicy')}
+          </ListItem>
+        </Island>
+      </div>
+    </div>
+  );
+};
+
+export default memo(withGlobal<OwnProps>(
+  (global): Complete<StateProps> => {
+    const { currentUserId } = global;
+    const isGiveawayAvailable = selectIsGiveawayGiftsPurchaseAvailable(global);
+    const starsBalance = global.stars?.balance;
+    const tonBalance = global.ton?.balance;
+
+    return {
+      sessionCount: global.activeSessions.orderedHashes.length,
+      currentUserId,
+      canBuyPremium: !selectIsPremiumPurchaseBlocked(global),
+      isGiveawayAvailable,
+      isWalletAvailable: selectIsWalletAvailable(global),
+      isCurrentUserFrozen: selectIsCurrentUserFrozen(global),
+      walletBalance: global.wallet?.state?.balance,
+      starsBalance,
+      tonBalance,
+    };
+  },
+)(SettingsMain));
