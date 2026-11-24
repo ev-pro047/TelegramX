@@ -122,7 +122,14 @@ const XydriveFolders = ({
   if (dialog === 'manage' && folder) {
     const label = organization.folderLabels?.[folder.id];
     return (
-      <Modal isOpen isSlim hasCloseButton title={folder.title} onClose={onClose}>
+      <Modal
+        isOpen
+        isSlim
+        hasCloseButton
+        title={folder.title}
+        dialogClassName={styles.sheetFrame}
+        onClose={onClose}
+      >
         <div className={styles.dialog}>
           <p className={styles.description}>
             {lang(folder.isManaged ? 'XydriveManagedPolicy' : 'XydriveMountedPolicy')}
@@ -176,6 +183,7 @@ const XydriveFolders = ({
   return (
     <Modal
       isOpen
+      dialogClassName={styles.sheetFrame}
       isSlim
       hasCloseButton={!isBusy}
       title={lang(TITLES[dialog])}

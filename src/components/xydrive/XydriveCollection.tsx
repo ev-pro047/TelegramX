@@ -89,169 +89,199 @@ const XydriveCollection = ({
 
   const allPageSelected = items.length > 0 && items.every(({ id }) => selected.has(id));
 
-  return (
-    <>
-      {view === 'list' && (
-        <div className={styles.columnHead}>
+  function renderItem(item: XydriveItem) {
+    const file = item.kind === 'file' ? item.file : undefined;
+    const folder = item.kind === 'folder' ? item.folder : undefined;
+    const isSelected = selected.has(item.id);
+    const format = file && getFileFormat(file);
+    const category = file?.category;
+    const type = category ? lang(CATEGORY_LABELS[category])
+      : lang(folder?.isManaged ? 'XydriveManagedFolder' : 'XydriveMountedChannel');
+    const size = file?.size === undefined ? undefined : formatFileSize(lang, file.size);
+    const date = file ? new Date(file.date * 1000).toLocaleDateString() : undefined;
+    const duration = file?.duration !== undefined ? formatMediaDuration(file.duration) : undefined;
+    const count = item.kind === 'folder' && item.snapshot
+      ? lang('XydriveIndexedCount', { count: lang.number(item.snapshot.files.length) }) : undefined;
+    const marks = [item.isFavorite && lang('XydriveFavorites'), item.isPinned && lang('XydrivePinned')]
+      .filter(Boolean).join(', ');
+
+    return (
+      <li
+        key={item.id}
+        data-drive-item={item.id}
+        className={buildClassName(styles.item, isSelected && styles.selected, folder && styles.folderItem,
+          (category === 'images' || category === 'videos') && styles.mediaItem)}
+        onContextMenu={(event: React.MouseEvent<HTMLLIElement>) => {
+          if (gestureRef.current?.didHold) return;
+          event.preventDefault();
+          onMenu(item, event.currentTarget);
+        }}
+        onDragOver={(event: React.DragEvent<HTMLLIElement>) => {
+          if (!draggedRef.current || !folder || !canDrop(draggedRef.current, item)
+            || !event.dataTransfer.types.includes(DRAG_TYPE)) {
+            return;
+          }
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+        }}
+        onDrop={(event: React.DragEvent<HTMLLIElement>) => {
+          if (!draggedRef.current || !folder || !canDrop(draggedRef.current, item)
+            || !event.dataTransfer.types.includes(DRAG_TYPE)) {
+            return;
+          }
+          event.preventDefault();
+          onDrop(draggedRef.current, item);
+          draggedRef.current = undefined;
+        }}
+      >
+        <button
+          type="button"
+          className={styles.select}
+          aria-label={lang(isSelected ? 'XydriveDeselectNamed' : 'XydriveSelectNamed', { name: item.name })}
+          aria-pressed={isSelected}
+          onClick={() => onSelect(item, 'toggle')}
+        >
+          <span className={styles.checkbox}>{isSelected && <Icon name="check" />}</span>
+        </button>
+        <button
+          type="button"
+          className={styles.itemMain}
+          aria-label={marks ? `${item.name} · ${marks}` : item.name}
+          title={item.name}
+          draggable={canDrag(item)}
+          onPointerDown={(event: React.PointerEvent<HTMLButtonElement>) => startPress(event, item)}
+          onPointerMove={movePress}
+          onPointerUp={cancelPress}
+          onPointerCancel={cancelPress}
+          onPointerLeave={cancelPress}
+          onClick={(event) => clickItem(event, item)}
+          onDoubleClick={(event) => { if (event.detail > 1) onOpen(item); }}
+          onKeyDown={(event) => {
+            if (event.key !== ' ') return;
+            event.preventDefault();
+            onSelect(item, 'toggle');
+          }}
+          onDragStart={(event) => {
+            if (!canDrag(item)) {
+              event.preventDefault();
+              return;
+            }
+            draggedRef.current = item;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData(DRAG_TYPE, item.id);
+          }}
+          onDragEnd={() => { draggedRef.current = undefined; }}
+        >
+          {file && category ? <XydriveThumbnail file={file} icon={getFileIcon(category)} observe={observe} />
+            : (
+              <span className={styles.folderGlyph} data-tone={item.kind === 'folder' ? item.tone : undefined}>
+                <Icon name={folder?.isManaged ? 'folder-filled' : 'folder'} />
+              </span>
+            )}
+          <span className={styles.itemCopy}>
+            <span className={styles.itemName} dir="auto">
+              {renderName(item.name, query)}
+              {folder && (item.isFavorite || item.isPinned) && (
+                <span className={styles.folderMarks} aria-hidden="true">
+                  {item.isFavorite && <Icon name="star-outline" />}
+                  {item.isPinned && <Icon name="pin" />}
+                </span>
+              )}
+            </span>
+            <span className={styles.itemMeta} dir="auto">
+              {format || type}
+              {count && ` · ${count}`}
+              {size && ` · ${size}`}
+              {date && ` · ${date}`}
+              {duration && ` · ${duration}`}
+            </span>
+          </span>
+        </button>
+        <span className={styles.type}>{format || type}</span>
+        <span className={styles.date}>{date || '–'}</span>
+        <span className={styles.size}>{size || '–'}</span>
+        <span className={styles.flags}>
+          {item.isFavorite && <Icon name="star-outline" />}
+          {item.isPinned && <Icon name="pin" />}
+        </span>
+        {file?.previewKind && (
           <button
             type="button"
-            className={styles.control}
-            role="checkbox"
-            aria-checked={allPageSelected}
-            aria-label={lang('XydriveSelectVisible')}
-            onClick={onTogglePage}
+            className={styles.preview}
+            disabled={previewingId === item.id}
+            aria-busy={previewingId === item.id}
+            aria-label={lang('XydrivePreviewNamed', { name: item.name })}
+            onClick={() => onOpen(item)}
           >
-            <span className={styles.checkbox}>{allPageSelected && <Icon name="check" />}</span>
+            <Icon name={previewingId === item.id ? 'reload-arrows'
+              : category === 'audio' || category === 'videos' ? 'play' : 'eye'}
+            />
           </button>
-          {COLUMNS.map(([field, label]) => (
-            <button
-              key={field}
-              type="button"
-              className={styles[field]}
-              aria-pressed={sort === field}
-              aria-label={sort === field ? `${lang(label)} · ${lang(direction === 'asc' ? 'XydriveAscending'
-                : 'XydriveDescending')}` : lang(label)}
-              onClick={() => onSort(field)}
-            >
-              {lang(label)}
-              {sort === field && <Icon name={direction === 'asc' ? 'up' : 'down'} />}
-            </button>
-          ))}
-        </div>
-      )}
-      <ul className={buildClassName(styles.collectionItems, view === 'grid' ? styles.grid : styles.list)}>
-        {items.map((item) => {
-          const file = item.kind === 'file' ? item.file : undefined;
-          const folder = item.kind === 'folder' ? item.folder : undefined;
-          const isSelected = selected.has(item.id);
-          const format = file && getFileFormat(file);
-          const category = file?.category;
-          const type = category ? lang(CATEGORY_LABELS[category])
-            : lang(folder?.isManaged ? 'XydriveManagedFolder' : 'XydriveMountedChannel');
-          const size = file?.size === undefined ? undefined : formatFileSize(lang, file.size);
-          const date = file ? new Date(file.date * 1000).toLocaleDateString() : undefined;
-          const duration = file?.duration !== undefined ? formatMediaDuration(file.duration) : undefined;
-          const count = item.kind === 'folder' && item.snapshot
-            ? lang('XydriveIndexedCount', { count: lang.number(item.snapshot.files.length) }) : undefined;
-          const marks = [item.isFavorite && lang('XydriveFavorites'), item.isPinned && lang('XydrivePinned')]
-            .filter(Boolean).join(', ');
+        )}
+        <button
+          type="button"
+          className={styles.more}
+          aria-haspopup="menu"
+          aria-label={lang('XydriveActionsNamed', { name: item.name })}
+          onClick={(event) => onMenu(item, event.currentTarget)}
+        >
+          <Icon name="more" />
+        </button>
+      </li>
+    );
+  }
 
-          return (
-            <li
-              key={item.id}
-              data-drive-item={item.id}
-              className={buildClassName(styles.item, isSelected && styles.selected, folder && styles.folderItem)}
-              onContextMenu={(event: React.MouseEvent<HTMLLIElement>) => {
-                if (gestureRef.current?.didHold) return;
-                event.preventDefault();
-                onMenu(item, event.currentTarget);
-              }}
-              onDragOver={(event: React.DragEvent<HTMLLIElement>) => {
-                if (!draggedRef.current || !folder || !canDrop(draggedRef.current, item)
-                  || !event.dataTransfer.types.includes(DRAG_TYPE)) {
-                  return;
-                }
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'move';
-              }}
-              onDrop={(event: React.DragEvent<HTMLLIElement>) => {
-                if (!draggedRef.current || !folder || !canDrop(draggedRef.current, item)
-                  || !event.dataTransfer.types.includes(DRAG_TYPE)) {
-                  return;
-                }
-                event.preventDefault();
-                onDrop(draggedRef.current, item);
-                draggedRef.current = undefined;
-              }}
-            >
-              <button
-                type="button"
-                className={styles.select}
-                aria-label={lang(isSelected ? 'XydriveDeselectNamed' : 'XydriveSelectNamed', { name: item.name })}
-                aria-pressed={isSelected}
-                onClick={() => onSelect(item, 'toggle')}
-              >
-                <span className={styles.checkbox}>{isSelected && <Icon name="check" />}</span>
-              </button>
-              <button
-                type="button"
-                className={styles.itemMain}
-                aria-label={marks ? `${item.name} · ${marks}` : item.name}
-                title={item.name}
-                draggable={canDrag(item)}
-                onPointerDown={(event: React.PointerEvent<HTMLButtonElement>) => startPress(event, item)}
-                onPointerMove={movePress}
-                onPointerUp={cancelPress}
-                onPointerCancel={cancelPress}
-                onPointerLeave={cancelPress}
-                onClick={(event) => clickItem(event, item)}
-                onDoubleClick={(event) => { if (event.detail > 1) onOpen(item); }}
-                onKeyDown={(event) => {
-                  if (event.key !== ' ') return;
-                  event.preventDefault();
-                  onSelect(item, 'toggle');
-                }}
-                onDragStart={(event) => {
-                  if (!canDrag(item)) {
-                    event.preventDefault();
-                    return;
-                  }
-                  draggedRef.current = item;
-                  event.dataTransfer.effectAllowed = 'move';
-                  event.dataTransfer.setData(DRAG_TYPE, item.id);
-                }}
-                onDragEnd={() => { draggedRef.current = undefined; }}
-              >
-                {file && category ? <XydriveThumbnail file={file} icon={getFileIcon(category)} observe={observe} />
-                  : (
-                    <span className={styles.folderGlyph} data-tone={item.kind === 'folder' ? item.tone : undefined}>
-                      <Icon name={folder?.isManaged ? 'folder-filled' : 'folder'} />
-                    </span>
-                  )}
-                <span className={styles.itemCopy}>
-                  <span className={styles.itemName} dir="auto">{renderName(item.name, query)}</span>
-                  <span className={styles.itemMeta} dir="auto">
-                    {format || type}
-                    {count && ` · ${count}`}
-                    {size && ` · ${size}`}
-                    {date && ` · ${date}`}
-                    {duration && ` · ${duration}`}
-                  </span>
-                </span>
-              </button>
-              <span className={styles.type}>{format || type}</span>
-              <span className={styles.date}>{date || '–'}</span>
-              <span className={styles.size}>{size || '–'}</span>
-              <span className={styles.flags}>
-                {item.isFavorite && <Icon name="star-outline" />}
-                {item.isPinned && <Icon name="pin" />}
-              </span>
-              {file?.previewKind && (
-                <button
-                  type="button"
-                  className={styles.preview}
-                  disabled={previewingId === item.id}
-                  aria-busy={previewingId === item.id}
-                  aria-label={lang('XydrivePreviewNamed', { name: item.name })}
-                  onClick={() => onOpen(item)}
-                >
-                  <Icon name={previewingId === item.id ? 'reload-arrows'
-                    : category === 'audio' || category === 'videos' ? 'play' : 'eye'}
-                  />
-                </button>
-              )}
-              <button
-                type="button"
-                className={styles.more}
-                aria-haspopup="menu"
-                aria-label={lang('XydriveActionsNamed', { name: item.name })}
-                onClick={(event) => onMenu(item, event.currentTarget)}
-              >
-                <Icon name="more" />
-              </button>
-            </li>
-          );
-        })}
+  if (view === 'grid') {
+    const folders = items.filter((item) => item.kind === 'folder');
+    const files = items.filter((item) => item.kind === 'file');
+    return (
+      <div className={styles.gridGroups}>
+        {folders.length > 0 && (
+          <section aria-labelledby="xydrive-folder-group">
+            <h2 id="xydrive-folder-group" className={styles.groupTitle}>{lang('XydriveFolders')}</h2>
+            <ul className={buildClassName(styles.collectionItems, styles.folderGrid)}>{folders.map(renderItem)}</ul>
+          </section>
+        )}
+        {files.length > 0 && (
+          <section aria-labelledby="xydrive-file-group">
+            <h2 id="xydrive-file-group" className={styles.groupTitle}>{lang('XydriveFolderFiles')}</h2>
+            <ul className={buildClassName(styles.collectionItems, styles.grid)}>{files.map(renderItem)}</ul>
+          </section>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className={styles.columnHead}>
+        <button
+          type="button"
+          className={styles.control}
+          role="checkbox"
+          aria-checked={allPageSelected}
+          aria-label={lang('XydriveSelectVisible')}
+          onClick={onTogglePage}
+        >
+          <span className={styles.checkbox}>{allPageSelected && <Icon name="check" />}</span>
+        </button>
+        {COLUMNS.map(([field, label]) => (
+          <button
+            key={field}
+            type="button"
+            className={styles[field]}
+            aria-pressed={sort === field}
+            aria-label={sort === field ? `${lang(label)} · ${lang(direction === 'asc' ? 'XydriveAscending'
+              : 'XydriveDescending')}` : lang(label)}
+            onClick={() => onSort(field)}
+          >
+            {lang(label)}
+            {sort === field && <Icon name={direction === 'asc' ? 'up' : 'down'} />}
+          </button>
+        ))}
+      </div>
+      <ul className={buildClassName(styles.collectionItems, styles.list)}>
+        {items.map(renderItem)}
       </ul>
     </>
   );

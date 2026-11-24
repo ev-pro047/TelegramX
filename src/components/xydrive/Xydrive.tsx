@@ -24,6 +24,7 @@ import AudioPlayer from '../middle/panes/AudioPlayer';
 import Button from '../ui/Button';
 import Menu from '../ui/Menu';
 import MenuItem from '../ui/MenuItem';
+import MenuSeparator from '../ui/MenuSeparator';
 import Modal from '../ui/Modal';
 import XydriveExplorer from './XydriveExplorer';
 import XydriveFolders from './XydriveFolders';
@@ -229,10 +230,6 @@ const Xydrive = ({
             </button>
           );
         })}
-        <button type="button" className={styles.navItem} onClick={() => openFolderDialog('create')}>
-          <Icon name="add" />
-          <span>{lang('XydriveNewFolder')}</span>
-        </button>
         <XydriveNavigation
           folders={folders}
           organization={org}
@@ -243,7 +240,7 @@ const Xydrive = ({
           onOpen={(id) => openSection('drive', id)}
           onManage={(item) => openFolderDialog('manage', item.id)}
         />
-        <button type="button" className={styles.navItem} onClick={() => openSection('overview')}>
+        <button type="button" className={styles.indexStatus} onClick={() => openSection('overview')}>
           <Icon name="info" />
           <span>
             {lang(index?.status === 'syncing' ? 'XydriveIndexSyncing' : isIndexComplete
@@ -271,36 +268,6 @@ const Xydrive = ({
       dir={lang.isRtl ? 'rtl' : 'ltr'}
       aria-label={lang('XydriveTitle')}
     >
-      <header className={styles.topbar}>
-        <div className={styles.brand}>
-          <button
-            ref={navigationRef}
-            type="button"
-            className={styles.more}
-            aria-label={lang('XydriveNavigation')}
-            aria-controls="xydrive-navigation"
-            aria-expanded={isDrawerLayout ? isNavigationOpen : !isSidebarCollapsed}
-            onClick={() => {
-              if (isDrawerLayout) setIsNavigationOpen(!isNavigationOpen);
-              else setPreferences({ ...preferences, isSidebarCollapsed: !isSidebarCollapsed });
-            }}
-          >
-            <Icon name="hamburger" />
-          </button>
-          <span className={styles.brandMark}><Icon name="folder-filled" /></span>
-          <strong>{lang('XydriveTitle')}</strong>
-          <span className={styles.beta}>{lang('XydriveBeta')}</span>
-          {accountName && <span className={styles.accountName} dir="auto" title={accountName}>{accountName}</span>}
-        </div>
-        <Button
-          size="smaller"
-          color="translucent"
-          iconName={lang.isRtl ? 'arrow-right' : 'arrow-left'}
-          onClick={onClose}
-        >
-          {lang('XydriveBackToChats')}
-        </Button>
-      </header>
       <div className={buildClassName(styles.layout, isSidebarCollapsed && styles.collapsed)}>
         <aside
           id="xydrive-navigation"
@@ -310,16 +277,26 @@ const Xydrive = ({
           ref={sidebarRef}
           className={buildClassName(styles.sidebar, isNavigationOpen && styles.drawerOpen)}
         >
-          {isDrawerLayout && (
-            <button
-              type="button"
-              className={styles.more}
-              aria-label={lang('Close')}
-              onClick={() => setIsNavigationOpen(false)}
-            >
-              <Icon name="close" />
-            </button>
-          )}
+          <div className={styles.sidebarHeader}>
+            <div className={styles.brand}>
+              <span className={styles.brandMark}><Icon name="folder-filled" /></span>
+              <div className={styles.brandText}>
+                <strong>{lang('XydriveTitle')}</strong>
+                {accountName && <span className={styles.accountName} dir="auto">{accountName}</span>}
+              </div>
+              <span className={styles.beta}>{lang('XydriveBeta')}</span>
+            </div>
+            {isDrawerLayout && (
+              <button
+                type="button"
+                className={styles.more}
+                aria-label={lang('Close')}
+                onClick={() => setIsNavigationOpen(false)}
+              >
+                <Icon name="close" />
+              </button>
+            )}
+          </div>
           {renderNavigation()}
         </aside>
         {isNavigationOpen && (
@@ -335,7 +312,33 @@ const Xydrive = ({
         )}
         <main className={styles.workspace} aria-label={lang('XydriveExplorer')}>
           <header className={styles.toolbar}>
+            <div className={styles.navigationActions}>
+              <button
+                type="button"
+                className={styles.more}
+                aria-label={lang('XydriveBackToChats')}
+                title={lang('XydriveBackToChats')}
+                onClick={onClose}
+              >
+                <Icon name={lang.isRtl ? 'arrow-right' : 'arrow-left'} />
+              </button>
+              <button
+                ref={navigationRef}
+                type="button"
+                className={styles.more}
+                aria-label={lang('XydriveNavigation')}
+                aria-controls="xydrive-navigation"
+                aria-expanded={isDrawerLayout ? isNavigationOpen : !isSidebarCollapsed}
+                onClick={() => {
+                  if (isDrawerLayout) setIsNavigationOpen(!isNavigationOpen);
+                  else setPreferences({ ...preferences, isSidebarCollapsed: !isSidebarCollapsed });
+                }}
+              >
+                <Icon name={isDrawerLayout ? 'hamburger' : 'sidebar'} />
+              </button>
+            </div>
             <div className={styles.location}>
+              <h1 className={styles.heading} dir="auto" title={title}>{title}</h1>
               {isDrive && Boolean(sourceId) && (
                 <nav className={styles.breadcrumb} aria-label={lang('XydriveFolderPath')}>
                   <button
@@ -364,15 +367,16 @@ const Xydrive = ({
                   ))}
                 </nav>
               )}
-              <h1 className={styles.heading} dir="auto" title={title}>{title}</h1>
             </div>
             <div className={styles.actions}>
               {isDrive ? (
                 <>
                   <Button
                     size="smaller"
-                    color="translucent-bordered"
+                    className={styles.createButton}
+                    color="translucent"
                     iconName="add"
+                    noFastClick
                     disabled={createStatus === 'creating'}
                     onClick={() => openFolderDialog('create')}
                   >
@@ -380,11 +384,14 @@ const Xydrive = ({
                   </Button>
                   <Button
                     size="smaller"
+                    className={styles.uploadButton}
                     iconName="arrow-up-circle-filled"
+                    ariaLabel={lang('XydriveUpload')}
+                    noFastClick
                     disabled={drive?.error === 'unavailable'}
                     onClick={() => uploadRef.current?.click()}
                   >
-                    {lang('XydriveUpload')}
+                    <span className={styles.uploadLabel}>{lang('XydriveUpload')}</span>
                   </Button>
                   <div className={styles.menuAnchor}>
                     <button
@@ -407,14 +414,12 @@ const Xydrive = ({
                       onClose={() => setIsMenuOpen(false)}
                     >
                       <MenuItem
+                        className={styles.menuCreate}
                         icon="add"
                         disabled={createStatus === 'creating'}
                         onClick={() => openFolderDialog('create')}
                       >
                         {lang('XydriveNewFolder')}
-                      </MenuItem>
-                      <MenuItem icon="keyboard" onClick={() => setIsShortcutsOpen(true)}>
-                        {lang('XydriveShortcuts')}
                       </MenuItem>
                       <MenuItem icon="reload-arrows" disabled={isLoading} onClick={onRefresh}>
                         {lang('XydriveRefresh')}
@@ -430,6 +435,7 @@ const Xydrive = ({
                       <MenuItem icon="folder" onClick={() => openFolderDialog('mount')}>
                         {lang('XydriveMountFolder')}
                       </MenuItem>
+                      <MenuSeparator />
                       {folder ? (
                         <>
                           <MenuItem
@@ -452,6 +458,10 @@ const Xydrive = ({
                           </MenuItem>
                         </>
                       ) : <MenuItem icon="arrow-right" onClick={onOpenSaved}>{lang('XydriveOpenSaved')}</MenuItem>}
+                      <MenuSeparator />
+                      <MenuItem icon="keyboard" onClick={() => setIsShortcutsOpen(true)}>
+                        {lang('XydriveShortcuts')}
+                      </MenuItem>
                     </Menu>
                   </div>
                 </>
@@ -560,6 +570,7 @@ const Xydrive = ({
           isSlim
           hasCloseButton
           title={lang('XydriveShortcuts')}
+          dialogClassName={styles.dialogFrame}
           onClose={() => setIsShortcutsOpen(false)}
         >
           <div className={styles.dialog}>
@@ -571,7 +582,13 @@ const Xydrive = ({
         </Modal>
       )}
       {textPreview && (
-        <Modal isOpen hasCloseButton title={textPreview.name} onClose={onCloseTextPreview}>
+        <Modal
+          isOpen
+          hasCloseButton
+          title={textPreview.name}
+          dialogClassName={styles.dialogFrame}
+          onClose={onCloseTextPreview}
+        >
           <pre className={styles.textPreview} dir="auto">{textPreview.text}</pre>
         </Modal>
       )}
