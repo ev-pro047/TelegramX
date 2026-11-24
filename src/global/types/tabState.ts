@@ -81,7 +81,7 @@ import type {
   WalletBackupError,
 } from '../../api/types';
 import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
-import type { XydriveIndex, XydriveMutationStatus, XydriveState } from '../../lib/xydrive/types';
+import type { XydriveIndex, XydriveMutation, XydriveState } from '../../lib/xydrive/types';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type {
@@ -232,10 +232,12 @@ export type TabState = {
   xydriveCreateState?: { ownerId: string; requestId: number; status: 'creating' | 'created' | 'error' | 'limit' | 'unverified' };
   xydriveMountError?: 'wait' | 'generic' | 'unavailable';
   xydriveMediaRequest?: { id: number; fileId: string };
+  xydriveTextPreview?: { fileId: string; name: string; text: string };
   xydriveMediaError?: 'wait' | 'unavailable';
   xydrive?: XydriveState;
   xydriveIndex?: XydriveIndex;
-  xydriveMutation?: { id: number; ownerId: string; fileId: string; status: XydriveMutationStatus };
+  xydriveMutation?: XydriveMutation;
+  xydriveRename?: { folderId: string; status: 'working' | 'complete' | 'error' | 'wait' };
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;
   uiReadyState: 0 | 1 | 2;

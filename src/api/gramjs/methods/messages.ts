@@ -294,6 +294,31 @@ export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
   }
 }
 
+export async function renameXydriveChannel({
+  ownerId, channel, title,
+}: { ownerId: string; channel: ApiChat; title: string }) {
+  if (!isXydriveCurrentAccount(ownerId) || !title.trim() || title.length > 128) return undefined;
+  if (xydriveRetryAt > getServerTime()) return { type: 'wait' as const };
+  try {
+    const verified = await fetchVerifiedXydriveChannel(channel);
+    if (!verified || !isXydriveCurrentAccount(ownerId)) return undefined;
+    if (verified.title !== title) {
+      const result = await invokeRequest(new GramJs.channels.EditTitle({
+        channel: buildInputChannel(verified.id, verified.accessHash), title,
+      }), { shouldThrow: true });
+      if (!result || !isXydriveCurrentAccount(ownerId)) return undefined;
+    }
+    const refreshed = await verifyXydriveChannel({ channel });
+    return refreshed?.type === 'channel' && refreshed.folder.title !== title ? undefined : refreshed;
+  } catch (err) {
+    if (err instanceof FloodWaitError || err instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + err.seconds;
+      return { type: 'wait' as const };
+    }
+    return undefined;
+  }
+}
+
 // Use the native attachment builder and DC bandwidth manager without consuming a chat draft.
 export async function uploadXydriveDocument({
   ownerId, chat, channel, attachment,

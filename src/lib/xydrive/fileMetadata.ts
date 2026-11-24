@@ -67,6 +67,7 @@ export function getXydriveFile(message: ApiMessage, sourceId: string): XydriveFi
     name,
     mimeType,
     size,
+    duration: 'duration' in media && Number.isFinite(media.duration) ? media.duration : undefined,
     date: message.date,
     category,
     mediaType,
@@ -77,4 +78,25 @@ export function mergeXydriveFiles(existing: readonly XydriveFile[], incoming: re
   const byId = new Map(existing.map((file) => [file.id, file]));
   incoming.forEach((file) => byId.set(file.id, file));
   return Array.from(byId.values()).sort((left, right) => right.messageId - left.messageId);
+}
+
+export const MAX_XYDRIVE_TEXT_PREVIEW_BYTES = 128 * 1024;
+const INLINE_TEXT_EXTENSIONS = /\.(txt|md|csv|tsv|log|json)$/i;
+const INLINE_TEXT_TYPES = new Set(['text/plain', 'text/markdown', 'text/csv', 'text/tab-separated-values', 'application/json']);
+
+export function canPreviewXydriveText(file: XydriveFile): boolean {
+  return file.mediaType === 'document' && file.size !== undefined && file.size <= MAX_XYDRIVE_TEXT_PREVIEW_BYTES
+    && (file.mimeType ? INLINE_TEXT_TYPES.has(file.mimeType)
+      || (file.mimeType === 'application/octet-stream' && INLINE_TEXT_EXTENSIONS.test(file.name))
+      : INLINE_TEXT_EXTENSIONS.test(file.name));
+}
+
+export function decodeXydrivePreviewText(data: ArrayBuffer): string | undefined {
+  if (data.byteLength > MAX_XYDRIVE_TEXT_PREVIEW_BYTES) return undefined;
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(data);
+    return text.includes('\0') ? undefined : text;
+  } catch {
+    return undefined;
+  }
 }

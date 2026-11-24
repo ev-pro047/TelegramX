@@ -345,3 +345,11 @@ function pump() {
     });
   }
 }
+
+export function dismissXydriveTransfer(id: string, ownerId?: string) {
+  const job = jobs.get(id);
+  if (!job || !ownerId || job.row.ownerId !== ownerId || getGlobal().currentUserId !== ownerId
+    || isActiveTransfer(job.row.status)) return;
+  jobs.delete(id);
+  notify();
+}
