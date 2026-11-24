@@ -1,6 +1,9 @@
 name: Import upstream Telegram Web A
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/import-web-a.yml']
 permissions:
   contents: write
 jobs:
