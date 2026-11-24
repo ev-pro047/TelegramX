@@ -67,6 +67,7 @@ const XydriveFileDialog = ({
   return (
     <Modal
       isOpen
+      dialogClassName={styles.sheetFrame}
       isSlim
       hasCloseButton={!isWorking}
       noBackdropClose={isWorking}

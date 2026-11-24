@@ -20,6 +20,7 @@ import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
+import workspaceStyles from './Xydrive.module.scss';
 import styles from './XydriveTransfers.module.scss';
 
 const STATUS: Record<TransferStatus, RegularLangKey> = {
@@ -180,7 +181,7 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
           isOpen
           hasCloseButton
           title={lang('XydriveTransfers')}
-          dialogClassName={styles.sheet}
+          dialogClassName={workspaceStyles.sheetFrame}
           onClose={() => setIsOpen(false)}
         >
           <div className={styles.transferContent}>
@@ -295,7 +296,14 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
         </Modal>
       )}
       {currentPending && (
-        <Modal isOpen isSlim hasCloseButton title={lang('XydriveDuplicateTitle')} onClose={() => setPending(undefined)}>
+        <Modal
+          isOpen
+          isSlim
+          hasCloseButton
+          title={lang('XydriveDuplicateTitle')}
+          dialogClassName={workspaceStyles.sheetFrame}
+          onClose={() => setPending(undefined)}
+        >
           <div className={styles.transferContent}>
             <p className={styles.meta} dir="auto">{lang('XydriveDropDestination', { folder: destination })}</p>
             <p className={styles.meta}>{lang('XydriveDuplicateChoices')}</p>
