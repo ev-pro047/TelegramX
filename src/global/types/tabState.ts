@@ -235,7 +235,7 @@ export type TabState = {
   xydriveMediaError?: 'wait' | 'unavailable';
   xydrive?: XydriveState;
   xydriveIndex?: XydriveIndex;
-  xydriveMutation?: { id: number; fileId: string; status: XydriveMutationStatus };
+  xydriveMutation?: { id: number; ownerId: string; fileId: string; status: XydriveMutationStatus };
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;
   uiReadyState: 0 | 1 | 2;

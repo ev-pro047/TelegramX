@@ -64,6 +64,7 @@ addActionHandler('mountXydriveChannel', async (global, actions, payload): Promis
   if (result?.type === 'channel' && result.folder.id === channelId) {
     const current = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
     global = replaceSettings(global, { xydriveMounts: { ownerId, folders: upsertXydriveMount(current, result.folder) } });
+    global = updateTabState(global, { xydriveIndex: undefined }, tabId);
   }
   setGlobal(global);
 });
@@ -117,7 +118,7 @@ addActionHandler('createXydriveFolder', async (global, actions, payload): Promis
       xydriveOrganization: setFolderParent(organization, nextFolders, verified.id, parentId) });
     if (isXydriveOpen(global, tabId, ownerId) && tab.xydriveSourceId === sourceAtStart) {
       global = updateTabState(global, {
-        xydriveSourceId: verified.id, xydrive: undefined,
+        xydriveSourceId: verified.id, xydrive: undefined, xydriveIndex: undefined,
         xydriveMediaRequest: undefined, xydriveMediaError: undefined,
       }, tabId);
     }
@@ -295,7 +296,7 @@ addActionHandler('openXydriveMedia', async (global, actions, payload): Promise<v
 
 
 const SYNC_PAGE_BUDGET = 100;
-const SYNC_FILE_LIMIT = 5000;
+const SYNC_FILE_LIMIT = 20000;
 
 function findDriveFile(global: GlobalState, tabId: number, ownerId: string, id: string): XydriveFile | undefined {
   const tab = global.byTabId[tabId];
@@ -311,7 +312,7 @@ function findDriveFile(global: GlobalState, tabId: number, ownerId: string, id: 
 addActionHandler('mutateXydriveFile', async (global, actions, payload): Promise<void> => {
   const { fileId, operation, destinationId, tabId = getCurrentTabId() } = payload;
   const ownerId = global.currentUserId;
-  if (!ownerId || !isXydriveOpen(global, tabId, ownerId) || global.byTabId[tabId].xydriveMutation?.status === 'working') return;
+  if (!ownerId || !isXydriveOpen(global, tabId, ownerId) || (global.byTabId[tabId].xydriveMutation?.ownerId === ownerId && global.byTabId[tabId].xydriveMutation?.status === 'working')) return;
   const file = findDriveFile(global, tabId, ownerId, fileId);
   if (!file) return;
   const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
@@ -320,7 +321,7 @@ addActionHandler('mutateXydriveFile', async (global, actions, payload): Promise<
   if ((file.chatId !== ownerId && !source) || (destinationId && !destination)
     || (operation === 'move' && file.chatId === (destinationId || ownerId))) return;
   const id = ++nextRequestId;
-  setGlobal(updateTabState(global, { xydriveMutation: { id, fileId, status: 'working' } }, tabId));
+  setGlobal(updateTabState(global, { xydriveMutation: { id, ownerId, fileId, status: 'working' } }, tabId));
   const result = await callApi('mutateXydriveFile', {
     ownerId, file, operation, source: source && buildXydriveChannel(source),
     destination: destination && buildXydriveChannel(destination),
@@ -342,7 +343,14 @@ addActionHandler('mutateXydriveFile', async (global, actions, payload): Promise<
     }
   }
   // Any mutation can change history; invalidate the scan rather than claiming its totals remain exact.
-  setGlobal(updateTabState(global, { xydriveMutation: { id, fileId, status }, xydriveIndex: undefined }, tabId));
+  const index = tab.xydriveIndex;
+  const snapshots = index?.ownerId === ownerId ? { ...index.sources } : undefined;
+  if (snapshots) {
+    delete snapshots[file.chatId];
+    if (operation === 'move') delete snapshots[destinationId || ownerId];
+  }
+  setGlobal(updateTabState(global, { xydriveMutation: { id, ownerId, fileId, status },
+    xydriveIndex: snapshots ? { ownerId, sources: snapshots, status: 'partial' } : undefined }, tabId));
   if (isXydriveOpen(global, tabId, ownerId)) actions.loadXydrivePage({ shouldRefresh: true, tabId });
 });
 
@@ -352,9 +360,11 @@ addActionHandler('syncXydriveIndex', async (global, actions, payload): Promise<v
   if (!ownerId || !isXydriveOpen(global, tabId, ownerId) || global.byTabId[tabId].xydriveIndex?.status === 'syncing') return;
   const requestId = ++nextRequestId;
   const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
-  const sources: Record<string, XydriveIndexSource> = {};
+  const previous = global.byTabId[tabId].xydriveIndex;
+  const sources: Record<string, XydriveIndexSource> = previous?.ownerId === ownerId && previous.status === 'partial'
+    ? Object.fromEntries(Object.entries(previous.sources).filter(([id]) => id === ownerId || folders.some((folder) => folder.id === id))) : {};
   let remaining = SYNC_PAGE_BUDGET;
-  let count = 0;
+  let count = Object.values(sources).reduce((sum, source) => sum + source.files.length, 0);
   let failed = false;
   const stillActive = () => {
     const latest = getGlobal();
@@ -364,12 +374,13 @@ addActionHandler('syncXydriveIndex', async (global, actions, payload): Promise<v
     if (!stillActive()) return;
     setGlobal(updateTabState(getGlobal(), { xydriveIndex: { ownerId, sources: { ...sources }, status, requestId } }, tabId));
   };
-  setGlobal(updateTabState(global, { xydriveIndex: { ownerId, sources: {}, status: 'syncing', requestId } }, tabId));
+  setGlobal(updateTabState(global, { xydriveIndex: { ownerId, sources: { ...sources }, status: 'syncing', requestId } }, tabId));
   for (const folder of [undefined, ...folders]) {
     if (!stillActive() || remaining <= 0 || count >= SYNC_FILE_LIMIT || failed) break;
     const sourceId = folder?.id || ownerId;
-    let offsetId: number | undefined;
-    let files: XydriveFile[] = [];
+    if (sources[sourceId]?.complete) continue;
+    let offsetId = sources[sourceId]?.nextOffsetId;
+    let files = sources[sourceId]?.files || [];
     let complete = false;
     do {
       if (!stillActive()) return;
@@ -385,7 +396,7 @@ addActionHandler('syncXydriveIndex', async (global, actions, payload): Promise<v
       complete = result.nextOffsetId === undefined;
       if (!complete && result.nextOffsetId === offsetId) { failed = true; break; }
       offsetId = result.nextOffsetId;
-      sources[sourceId] = { files, complete, checkedAt: Date.now() };
+      sources[sourceId] = { files, complete, checkedAt: Date.now(), nextOffsetId: offsetId };
       publish('syncing');
     } while (!complete && remaining > 0 && count < SYNC_FILE_LIMIT);
   }

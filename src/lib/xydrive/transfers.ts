@@ -214,6 +214,11 @@ async function refreshFolder(job: Job) {
   const { ownerId, sourceId, tabId } = job.row;
   const tab = selectTabState(context.global, tabId);
   const previous = tab.xydrive;
+  if (tab.xydriveIndex?.ownerId === ownerId) {
+    const sources = { ...tab.xydriveIndex.sources };
+    delete sources[sourceId];
+    setGlobal(updateTabState(context.global, { xydriveIndex: { ownerId, sources, status: 'partial' } }, tabId));
+  }
   if (tab.xydriveOwnerId !== ownerId || previous?.sourceId !== sourceId || previous.status !== 'ready') return;
   const result = await callApi('fetchXydriveHistory', { channel: context.folder && buildXydriveChannel(context.folder) });
   const currentContext = getContext(job);

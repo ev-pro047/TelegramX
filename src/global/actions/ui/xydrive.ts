@@ -66,8 +66,14 @@ addActionHandler('unmountXydriveChannel', (global, actions, payload): ActionRetu
 
   const folders = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId);
   if (!folders.some(({ id }) => id === channelId)) return undefined;
-  global = replaceSettings(global, { xydriveMounts: { ownerId, folders: folders.filter(({ id }) => id !== channelId) } });
+  const org = getOrganization(global.settings.byKey.xydriveOrganization, ownerId);
+  const parents = { ...org.parents };
+  delete parents[channelId];
+  for (const id of Object.keys(parents)) if (parents[id] === channelId) delete parents[id];
+  global = replaceSettings(global, { xydriveMounts: { ownerId, folders: folders.filter(({ id }) => id !== channelId) },
+    xydriveOrganization: { ...org, parents } });
   for (const tab of Object.values(global.byTabId)) {
+    if (tab.xydriveIndex?.ownerId === ownerId) global = updateTabState(global, { xydriveIndex: undefined }, tab.id);
     if (tab.xydriveSourceId === channelId && tab.xydriveOwnerId === ownerId) {
       global = updateTabState(global, {
         xydriveSourceId: undefined, xydrive: undefined, xydriveMediaRequest: undefined, xydriveMediaError: undefined,

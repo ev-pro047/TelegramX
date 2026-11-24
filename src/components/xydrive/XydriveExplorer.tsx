@@ -378,7 +378,7 @@ const XydriveExplorer = ({
                               {lang(getFileLabel(organization, file)?.pinned ? 'XydriveUnpin' : 'XydrivePin')}
                             </MenuItem>
                             <MenuItem icon="folder" disabled={busy} onClick={() => startEdit(file, 'move')}>{lang('XydriveMove')}</MenuItem>
-                            <MenuItem disabled={busy} onClick={() => startEdit(file, 'delete')}>{lang('XydriveDelete')}</MenuItem>
+                            <MenuItem destructive disabled={busy} onClick={() => startEdit(file, 'delete')}>{lang('XydriveDelete')}</MenuItem>
                             <MenuItem icon="check" onClick={() => toggleFile(file.id)}>
                               {lang(isSelected ? 'XydriveDeselectFile' : 'XydriveSelectFile')}
                             </MenuItem>

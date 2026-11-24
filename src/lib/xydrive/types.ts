@@ -55,6 +55,7 @@ export type XydriveIndexSource = {
   files: XydriveFile[];
   complete: boolean;
   checkedAt: number;
+  nextOffsetId?: number;
 };
 
 export type XydriveIndex = {

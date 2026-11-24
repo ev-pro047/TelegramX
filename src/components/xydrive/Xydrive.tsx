@@ -78,7 +78,7 @@ const Xydrive = ({
   const indexedFiles = useMemo(() => {
     const found = new Map<string, XydriveFile>();
     const allowed = new Set([ownerId, ...(folders || []).map(({ id }) => id)]);
-    if (index?.ownerId === ownerId) Object.entries(index?.sources || {}).forEach(([id, snapshot]) => {
+    if (index && index.ownerId === ownerId) Object.entries(index.sources).forEach(([id, snapshot]) => {
       if (allowed.has(id)) snapshot.files.forEach((file) => found.set(file.id, file));
     });
     if (drive?.ownerId === ownerId && drive) {
@@ -152,7 +152,7 @@ const Xydrive = ({
       <div className={styles.layout}>
         <aside className={styles.dock} aria-label={lang('XydriveFolderPath')}>
           <button type="button" title={lang('XydriveRoot')} aria-label={lang('XydriveRoot')}
-            className={buildClassName(styles.dockButton, !sourceId && styles.navActive)}
+            className={buildClassName(styles.dockButton, section === 'drive' && !sourceId && styles.navActive)}
             onClick={() => navigateFolder()}>
             <Icon name="folder-filled" />
           </button>
@@ -191,7 +191,7 @@ const Xydrive = ({
             {allFolders.slice().sort((a, b) => getFolderChain(org, allFolders, a.id).map(({ title }) => title).join('/').localeCompare(
               getFolderChain(org, allFolders, b.id).map(({ title }) => title).join('/'))).map((item) => (
               <button key={item.id} type="button"
-                className={buildClassName(styles.navItem, sourceId === item.id && styles.navActive)}
+                className={buildClassName(styles.navItem, section === 'drive' && sourceId === item.id && styles.navActive)}
                 aria-current={sourceId === item.id && section === 'drive' ? 'page' : undefined}
                 onClick={() => navigateFolder(item.id)}>
                 <Icon name="folder-filled" /><span dir="auto">{'\u00a0'.repeat(Math.min(12, (getFolderChain(org, allFolders, item.id).length - 1) * 3))}{item.title}</span>

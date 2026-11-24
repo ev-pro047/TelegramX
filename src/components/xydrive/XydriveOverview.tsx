@@ -14,7 +14,7 @@ const XydriveOverview = ({ files, folders, index, ownerId }: OwnProps) => {
   const lang = useLang();
   const bytes = files.reduce((total, file) => total + (file.size || 0), 0);
   const unknown = files.filter((file) => file.size === undefined).length;
-  const sources = [ownerId, ...folders.map(({ id }) => id)].filter(Boolean);
+  const sources = [ownerId, ...folders.map(({ id }) => id)].filter((id): id is string => Boolean(id));
   return (
     <section className={styles.overview}>
       <h1>{lang('XydriveOverview')}</h1>

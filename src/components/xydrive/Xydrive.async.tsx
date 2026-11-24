@@ -192,7 +192,7 @@ export default memo(withGlobal(
       organization: isOpen && global.settings.byKey.xydriveOrganization?.ownerId === global.currentUserId
         ? global.settings.byKey.xydriveOrganization : undefined,
       index: isOpen && tab.xydriveIndex?.ownerId === global.currentUserId ? tab.xydriveIndex : undefined,
-      mutationStatus: isOpen ? tab.xydriveMutation?.status : undefined,
+      mutationStatus: isOpen && tab.xydriveMutation?.ownerId === global.currentUserId ? tab.xydriveMutation?.status : undefined,
       previewingId: isOpen ? tab.xydriveMediaRequest?.fileId : undefined,
       mediaError: isOpen ? tab.xydriveMediaError : undefined,
       isViewerOpen: isOpen && tab.mediaViewer.origin === MediaViewerOrigin.Xydrive
