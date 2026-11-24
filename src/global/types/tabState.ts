@@ -230,6 +230,8 @@ export type TabState = {
   xydriveSourceId?: string;
   xydriveMountRequest?: { id: number; channelId: string };
   xydriveMountError?: 'wait' | 'generic' | 'unavailable';
+  xydriveMediaRequest?: { id: number; fileId: string };
+  xydriveMediaError?: 'wait' | 'unavailable';
   xydrive?: XydriveState;
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;

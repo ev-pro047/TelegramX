@@ -11,6 +11,7 @@ import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
 import Modal from '../ui/Modal';
+import AudioPlayer from '../middle/panes/AudioPlayer';
 import XydriveExplorer from './XydriveExplorer';
 
 import styles from './Xydrive.module.scss';
@@ -27,6 +28,10 @@ type OwnProps = {
   onOpenSaved: NoneToVoidFunction;
   onLoadMore: NoneToVoidFunction;
   onOpenMessage: (file: XydriveFile) => void;
+  onPreview: (file: XydriveFile) => void;
+  previewingId?: string;
+  mediaError?: 'wait' | 'unavailable';
+  isViewerOpen?: boolean;
   onSelectSource: (channelId?: string) => void;
   onMount: (channelId: string) => void;
   onUnmount: (channelId: string) => void;
@@ -37,6 +42,7 @@ const EMPTY_FILES: XydriveFile[] = [];
 const Xydrive = ({
   isOpen, drive, sourceId, folders, chats, mountingId, mountError,
   onClose, onOpenSaved, onLoadMore, onOpenMessage, onSelectSource, onMount, onUnmount,
+  onPreview, previewingId, mediaError, isViewerOpen,
 }: OwnProps) => {
   const lang = useLang();
   const [isMountPickerOpen, setIsMountPickerOpen] = useState(false);
@@ -65,6 +71,7 @@ const Xydrive = ({
       hasCloseButton
       isBackButton
       noFreezeOnClose
+      isKeyboardSuspended={isViewerOpen}
       onClose={onClose}
     >
       <div className={styles.workspace} dir={lang.isRtl ? 'rtl' : 'ltr'}>
@@ -80,6 +87,7 @@ const Xydrive = ({
             </Button>
           )}
         </div>
+        {isOpen && <AudioPlayer isCompact />}
         <nav className={styles.breadcrumb} aria-label={lang('XydriveFolderPath')}>
           <Button
             size="smaller"
@@ -158,7 +166,14 @@ const Xydrive = ({
             isComplete={drive?.status === 'ready' && !hasMore}
             isLoading={isLoading}
             onOpenMessage={onOpenMessage}
+            onPreview={onPreview}
+            previewingId={previewingId}
           />
+        )}
+        {mediaError && (
+          <p role="alert" className={styles.description}>
+            {lang(mediaError === 'wait' ? 'XydriveWait' : 'XydriveMediaUnavailable')}
+          </p>
         )}
         <div className={styles.status} aria-live="polite">
           {isLoading && <Loading />}

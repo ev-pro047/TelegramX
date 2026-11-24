@@ -1,4 +1,5 @@
 import type { ActionReturnType } from '../../types';
+import { MediaViewerOrigin } from '../../../types';
 
 import { getXydriveMounts } from '../../../lib/xydrive/folders';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
@@ -19,17 +20,25 @@ addActionHandler('openXydrive', (global, actions, payload): ActionReturnType => 
     xydrive: undefined,
     xydriveMountRequest: undefined,
     xydriveMountError: undefined,
+    xydriveMediaRequest: undefined,
+    xydriveMediaError: undefined,
   }, tabId);
 });
 
 addActionHandler('closeXydrive', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};
+  if (global.byTabId[tabId]?.mediaViewer.origin === MediaViewerOrigin.Xydrive) {
+    const { volume, isMuted, playbackRate } = global.byTabId[tabId].mediaViewer;
+    global = updateTabState(global, { mediaViewer: { volume, isMuted, playbackRate } }, tabId);
+  }
   return updateTabState(global, {
     xydriveOwnerId: undefined,
     xydriveSourceId: undefined,
     xydrive: undefined,
     xydriveMountRequest: undefined,
     xydriveMountError: undefined,
+    xydriveMediaRequest: undefined,
+    xydriveMediaError: undefined,
   }, tabId);
 });
 
@@ -42,7 +51,9 @@ addActionHandler('selectXydriveSource', (global, actions, payload): ActionReturn
   if (channelId && !getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId)
     .some(({ id }) => id === channelId)) return undefined;
 
-  return updateTabState(global, { xydriveSourceId: channelId, xydrive: undefined }, tabId);
+  return updateTabState(global, {
+    xydriveSourceId: channelId, xydrive: undefined, xydriveMediaRequest: undefined, xydriveMediaError: undefined,
+  }, tabId);
 });
 
 addActionHandler('unmountXydriveChannel', (global, actions, payload): ActionReturnType => {
@@ -56,7 +67,9 @@ addActionHandler('unmountXydriveChannel', (global, actions, payload): ActionRetu
   global = replaceSettings(global, { xydriveMounts: { ownerId, folders: folders.filter(({ id }) => id !== channelId) } });
   for (const tab of Object.values(global.byTabId)) {
     if (tab.xydriveSourceId === channelId && tab.xydriveOwnerId === ownerId) {
-      global = updateTabState(global, { xydriveSourceId: undefined, xydrive: undefined }, tab.id);
+      global = updateTabState(global, {
+        xydriveSourceId: undefined, xydrive: undefined, xydriveMediaRequest: undefined, xydriveMediaError: undefined,
+      }, tab.id);
     }
   }
   return global;

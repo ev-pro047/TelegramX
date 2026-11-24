@@ -3650,6 +3650,8 @@ export interface LangPair {
   'XydriveMimeType': undefined;
   'XydriveUnknownValue': undefined;
   'XydriveLoadingOlder': undefined;
+  'XydrivePreview': undefined;
+  'XydriveMediaUnavailable': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {

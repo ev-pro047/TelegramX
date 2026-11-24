@@ -3,6 +3,7 @@ import { getActions, withGlobal } from '../../global';
 
 import type { ApiChat } from '../../api/types';
 import type { XydriveFile, XydriveMount, XydriveState } from '../../lib/xydrive/types';
+import { MediaViewerOrigin } from '../../types';
 
 import { selectTabState } from '../../global/selectors';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
@@ -23,13 +24,18 @@ type StateProps = {
   mountingId?: string;
   mountError?: 'wait' | 'generic' | 'unavailable';
   drive?: XydriveState;
+  previewingId?: string;
+  mediaError?: 'wait' | 'unavailable';
+  isViewerOpen?: boolean;
 };
 
 const XydriveAsync = ({
   isEnabled, currentUserId, xydriveOwnerId, isScreenLocked, sourceId, folders, chats, mountingId, mountError, drive,
+  previewingId, mediaError, isViewerOpen,
 }: StateProps) => {
   const {
     closeXydrive, openChat, focusMessage, loadXydrivePage, selectXydriveSource, mountXydriveChannel, unmountXydriveChannel,
+    openXydriveMedia,
   } = getActions();
   const isOpen = Boolean(isEnabled && !isScreenLocked && currentUserId && xydriveOwnerId === currentUserId);
   const Xydrive = useModuleLoader(Bundles.Xydrive, 'Xydrive', !isOpen);
@@ -64,6 +70,10 @@ const XydriveAsync = ({
     focusMessage({ chatId: file.chatId, messageId: file.messageId, shouldReplaceHistory: true });
   });
 
+  const handlePreview = useLastCallback((file: XydriveFile) => {
+    if (isOpen) openXydriveMedia({ fileId: file.id });
+  });
+
   const handleSelectSource = useLastCallback((channelId?: string) => {
     if (isOpen) selectXydriveSource({ channelId });
   });
@@ -89,6 +99,10 @@ const XydriveAsync = ({
       onOpenSaved={handleOpenSaved}
       onLoadMore={handleLoadMore}
       onOpenMessage={handleOpenMessage}
+      onPreview={handlePreview}
+      previewingId={isOpen ? previewingId : undefined}
+      mediaError={isOpen ? mediaError : undefined}
+      isViewerOpen={isOpen && isViewerOpen}
       onSelectSource={handleSelectSource}
       onMount={handleMount}
       onUnmount={handleUnmount}
@@ -113,6 +127,10 @@ export default memo(withGlobal(
       mountingId: isOpen ? tab.xydriveMountRequest?.channelId : undefined,
       mountError: isOpen ? tab.xydriveMountError : undefined,
       drive: isOpen ? tab.xydrive : undefined,
+      previewingId: isOpen ? tab.xydriveMediaRequest?.fileId : undefined,
+      mediaError: isOpen ? tab.xydriveMediaError : undefined,
+      isViewerOpen: isOpen && tab.mediaViewer.origin === MediaViewerOrigin.Xydrive
+        && Boolean(tab.mediaViewer.messageId) && !tab.mediaViewer.isHidden,
     };
   },
 )(XydriveAsync));

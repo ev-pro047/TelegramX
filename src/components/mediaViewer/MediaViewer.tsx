@@ -175,7 +175,7 @@ const MediaViewer = ({
     || (currentItem?.type === 'pageBlock' ? currentItem.pageMedia.pageUrl || 'pageBlock' : undefined);
   const prevSenderId = usePreviousDeprecated<string | undefined>(senderId);
   const headerAnimation = withAnimation ? 'slideFade' : 'none';
-  const isGhostAnimation = Boolean(withAnimation && !shouldSkipHistoryAnimations);
+  const isGhostAnimation = Boolean(withAnimation && !shouldSkipHistoryAnimations && origin !== MediaViewerOrigin.Xydrive);
 
   /* Controls */
   const [isReportAvatarModalOpen, openReportAvatarModal, closeReportAvatarModal] = useFlag();
