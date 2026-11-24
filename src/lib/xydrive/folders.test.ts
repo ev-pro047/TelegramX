@@ -31,7 +31,10 @@ describe('Xydrive private folders', () => {
 
   it('deduplicates folders by channel ID and keeps native peer information', () => {
     const updated = { ...FOLDER, title: 'Updated' };
-    expect(upsertXydriveMount([FOLDER], updated)).toEqual([updated]);
+    const other = { ...FOLDER, id: '-100456' };
+    const folders = [FOLDER, other];
+    expect(upsertXydriveMount(folders, updated)).toEqual([updated, other]);
+    expect(upsertXydriveMount(folders, FOLDER)).toBe(folders);
     expect(buildXydriveChannel(FOLDER)).toMatchObject({ id: CHANNEL.id, type: 'chatTypeChannel', accessHash: '123' });
   });
 

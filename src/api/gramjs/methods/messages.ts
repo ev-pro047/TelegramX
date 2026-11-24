@@ -260,11 +260,17 @@ async function fetchVerifiedXydriveChannel(channel: ApiChat) {
 
   if (!result) return undefined;
   const raw = result.chats.find((chat) => chat instanceof GramJs.Channel);
-  if (!(raw instanceof GramJs.Channel) || !raw.broadcast || !raw.creator) return undefined;
+  if (!(raw instanceof GramJs.Channel) || !raw.broadcast || !raw.creator || raw.restricted) return undefined;
   const verified = buildApiChatFromPreview(raw);
   if (!verified || verified.id !== channel.id || !isXydriveChannelEligible(verified)) return undefined;
 
   return { id: verified.id, title: verified.title, accessHash: verified.accessHash! };
+}
+
+function isXydriveChannelUnavailable(err: unknown) {
+  return err instanceof RPCError && [
+    'CHANNEL_PRIVATE', 'CHANNEL_INVALID', 'CHAT_ADMIN_REQUIRED', 'USER_BANNED_IN_CHANNEL',
+  ].includes(err.errorMessage);
 }
 
 export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
@@ -279,6 +285,7 @@ export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
       xydriveRetryAt = getServerTime() + err.seconds;
       return { type: 'wait' as const };
     }
+    if (isXydriveChannelUnavailable(err)) return { type: 'unavailable' as const };
     return undefined;
   }
 }
@@ -320,6 +327,7 @@ export async function fetchXydriveHistory({ offsetId, channel }: { offsetId?: nu
       xydriveRetryAt = getServerTime() + err.seconds;
       return { type: 'wait' as const, retryAfter: err.seconds };
     }
+    if (channel && isXydriveChannelUnavailable(err)) return { type: 'unavailable' as const };
     return undefined;
   }
 }

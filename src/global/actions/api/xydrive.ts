@@ -104,12 +104,13 @@ addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<vo
 
   if (!result || result.type !== 'page') {
     const isUnavailable = result?.type === 'unavailable';
+    const shouldClear = isUnavailable || (Boolean(folder) && !result);
     setGlobal(updateTabState(global, {
       xydrive: {
         ...current,
-        files: isUnavailable ? [] : current.files,
-        scannedCount: isUnavailable ? 0 : current.scannedCount,
-        nextOffsetId: isUnavailable ? undefined : current.nextOffsetId,
+        files: shouldClear ? [] : current.files,
+        scannedCount: shouldClear ? 0 : current.scannedCount,
+        nextOffsetId: shouldClear ? undefined : current.nextOffsetId,
         requestId: undefined,
         status: 'error',
         error: result?.type === 'wait' ? 'wait' : isUnavailable ? 'unavailable' : 'generic',
@@ -119,9 +120,10 @@ addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<vo
   }
 
   if (result.folder && result.folder.id === sourceId) {
-    global = replaceSettings(global, {
-      xydriveMounts: { ownerId, folders: upsertXydriveMount(currentFolders, result.folder) },
-    });
+    const updatedFolders = upsertXydriveMount(currentFolders, result.folder);
+    if (updatedFolders !== currentFolders) {
+      global = replaceSettings(global, { xydriveMounts: { ownerId, folders: updatedFolders } });
+    }
   }
   const files = result.messages.map((message) => getXydriveFile(message, sourceId)).filter(Boolean);
   setGlobal(updateTabState(global, {
