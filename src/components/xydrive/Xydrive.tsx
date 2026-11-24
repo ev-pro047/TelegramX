@@ -1,12 +1,9 @@
 import { memo, useEffect, useMemo, useState } from '../../lib/teact/teact';
 
 import type { ApiChat } from '../../api/types';
-import type { XydriveCategory, XydriveFile, XydriveMount, XydriveState } from '../../lib/xydrive/types';
-import type { IconName } from '../../types/icons';
-import type { RegularLangKey } from '../../types/language';
+import type { XydriveFile, XydriveMount, XydriveState } from '../../lib/xydrive/types';
 
 import { isXydriveChannelEligible } from '../../lib/xydrive/folders';
-import { formatFileSize } from '../../util/text/textFormat';
 
 import useLang from '../../hooks/useLang';
 
@@ -14,6 +11,7 @@ import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
 import Modal from '../ui/Modal';
+import XydriveExplorer from './XydriveExplorer';
 
 import styles from './Xydrive.module.scss';
 
@@ -28,47 +26,17 @@ type OwnProps = {
   onClose: NoneToVoidFunction;
   onOpenSaved: NoneToVoidFunction;
   onLoadMore: NoneToVoidFunction;
+  onOpenMessage: (file: XydriveFile) => void;
   onSelectSource: (channelId?: string) => void;
   onMount: (channelId: string) => void;
   onUnmount: (channelId: string) => void;
 };
 
-const CATEGORY_LABELS: Record<XydriveCategory, RegularLangKey> = {
-  images: 'XydriveImages',
-  videos: 'XydriveVideos',
-  audio: 'XydriveAudio',
-  documents: 'XydriveDocuments',
-  archives: 'XydriveArchives',
-  other: 'XydriveOther',
-};
-
-const CATEGORY_ICONS: Record<XydriveCategory, IconName> = {
-  images: 'sd-photo',
-  videos: 'video',
-  audio: 'music',
-  documents: 'document',
-  archives: 'archive',
-  other: 'file-badge',
-};
-
-const XydriveFileRow = memo(({ file }: { file: XydriveFile }) => {
-  const lang = useLang();
-  const size = file.size === undefined ? lang('XydriveUnknownSize') : formatFileSize(lang, file.size);
-
-  return (
-    <li className={styles.fileRow}>
-      <Icon name={CATEGORY_ICONS[file.category]} className={styles.fileIcon} />
-      <div className={styles.fileInfo}>
-        <span className={styles.fileName} dir="auto">{file.name}</span>
-        <span className={styles.fileMeta}>{lang(CATEGORY_LABELS[file.category])} · {size}</span>
-      </div>
-    </li>
-  );
-});
+const EMPTY_FILES: XydriveFile[] = [];
 
 const Xydrive = ({
   isOpen, drive, sourceId, folders, chats, mountingId, mountError,
-  onClose, onOpenSaved, onLoadMore, onSelectSource, onMount, onUnmount,
+  onClose, onOpenSaved, onLoadMore, onOpenMessage, onSelectSource, onMount, onUnmount,
 }: OwnProps) => {
   const lang = useLang();
   const [isMountPickerOpen, setIsMountPickerOpen] = useState(false);
@@ -84,7 +52,7 @@ const Xydrive = ({
     if (!isOpen || sourceId) setIsMountPickerOpen(false);
   }, [isOpen, sourceId]);
 
-  const files = drive?.files;
+  const files = drive?.files || EMPTY_FILES;
   const isLoading = !drive || drive.status === 'loading';
   const hasError = drive?.status === 'error';
   const hasMore = drive?.nextOffsetId !== undefined;
@@ -96,6 +64,7 @@ const Xydrive = ({
       dialogClassName={styles.dialog}
       hasCloseButton
       isBackButton
+      noFreezeOnClose
       onClose={onClose}
     >
       <div className={styles.workspace} dir={lang.isRtl ? 'rtl' : 'ltr'}>
@@ -182,10 +151,14 @@ const Xydrive = ({
             </Button>
           )}
         </div>
-        {Boolean(files?.length) && (
-          <ul className={styles.fileList}>
-            {files!.map((file) => <XydriveFileRow key={file.id} file={file} />)}
-          </ul>
+        {isOpen && (
+          <XydriveExplorer
+            key={sourceId || 'root'}
+            files={files}
+            isComplete={drive?.status === 'ready' && !hasMore}
+            isLoading={isLoading}
+            onOpenMessage={onOpenMessage}
+          />
         )}
         <div className={styles.status} aria-live="polite">
           {isLoading && <Loading />}
