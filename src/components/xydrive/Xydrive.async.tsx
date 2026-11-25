@@ -1,8 +1,9 @@
-import { memo, useEffect, useRef } from '../../lib/teact/teact';
+import { memo, useEffect, useMemo, useRef } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiChat } from '../../api/types';
-import type { CloudSyncStatus } from '../../lib/xydrive/cloud';
+import type { CloudBase, CloudSyncStatus } from '../../lib/xydrive/cloud';
+import { makeCloudSnapshot, sameCloudSnapshot } from '../../lib/xydrive/cloud';
 import type {
   XydriveFile, XydriveFolderLabel, XydriveIndex, XydriveMount, XydriveMutation, XydriveOrganization, XydriveState,
 } from '../../lib/xydrive/types';
@@ -27,6 +28,7 @@ type StateProps = {
   accountName?: string;
   xydriveOwnerId?: string;
   cloudStatus?: CloudSyncStatus;
+  cloudBase?: CloudBase;
   isScreenLocked?: boolean;
   sourceId?: string;
   folders?: XydriveMount[];
@@ -50,7 +52,7 @@ const XydriveAsync = ({
   isEnabled, currentUserId, accountName, xydriveOwnerId, isScreenLocked, sourceId, folders, chats,
   mountingId, mountError, drive,
   previewingId, mediaError, textPreview, isViewerOpen, isSynced, createStatus,
-  organization, index, mutation, renameStatus, cloudStatus,
+  organization, index, mutation, renameStatus, cloudStatus, cloudBase,
 }: StateProps) => {
   const {
     openXydrive, closeXydrive, openChat, focusMessage, loadXydrivePage, selectXydriveSource,
@@ -76,18 +78,25 @@ const XydriveAsync = ({
     if (isOpen) loadXydrivePage();
   }, [isOpen, sourceId, loadXydrivePage]);
 
+  const cloudDirty = useMemo(() => Boolean(isOpen && cloudBase && cloudBase.ownerId === currentUserId
+    && !sameCloudSnapshot(cloudBase.snapshot, makeCloudSnapshot(folders || [], organization))),
+  [isOpen, cloudBase, currentUserId, folders, organization]);
+
   useEffect(() => {
-    if (!isOpen || !isSynced) return undefined;
-    syncXydriveCloud();
-    const timer = window.setInterval(() => syncXydriveCloud(), 60_000);
-    return () => window.clearInterval(timer);
+    if (isOpen && isSynced) syncXydriveCloud();
   }, [isOpen, isSynced, currentUserId, syncXydriveCloud]);
 
   useEffect(() => {
-    if (!isOpen || cloudStatus !== 'synced') return undefined;
+    if (!isOpen || !isSynced || !cloudBase || cloudStatus === 'conflict' || cloudStatus === 'setup') return undefined;
+    const timer = window.setInterval(() => syncXydriveCloud(), 120_000);
+    return () => window.clearInterval(timer);
+  }, [isOpen, isSynced, Boolean(cloudBase), cloudStatus, syncXydriveCloud]);
+
+  useEffect(() => {
+    if (!isOpen || !isSynced || !cloudDirty || cloudStatus !== 'synced') return undefined;
     const timer = window.setTimeout(() => syncXydriveCloud(), 1500);
     return () => window.clearTimeout(timer);
-  }, [isOpen, folders, organization]);
+  }, [isOpen, isSynced, cloudDirty, cloudStatus, folders, organization, syncXydriveCloud]);
 
   const handleLoadMore = useLastCallback(() => {
     if (isOpen) loadXydrivePage();
@@ -203,7 +212,7 @@ const XydriveAsync = ({
       onLabelFolder={handleLabelFolder}
       onMutate={handleMutate}
       onReparent={handleReparent}
-      cloudStatus={cloudStatus}
+      cloudStatus={cloudStatus === 'synced' && cloudDirty ? 'syncing' : cloudStatus}
       onCloudSync={(shouldCreate) => syncXydriveCloud({ shouldCreate })}
       onSync={() => syncXydriveIndex()}
       onCancelSync={() => cancelXydriveSync()}
@@ -233,6 +242,8 @@ export default memo(withGlobal(
       accountName: isOpen && global.currentUserId ? global.users.byId[global.currentUserId]?.firstName : undefined,
       xydriveOwnerId: tab.xydriveOwnerId,
       cloudStatus: isOpen ? tab.xydriveCloudStatus : undefined,
+      cloudBase: isOpen && global.settings.byKey.xydriveCloudBase?.ownerId === global.currentUserId
+        ? global.settings.byKey.xydriveCloudBase : undefined,
       isScreenLocked: global.passcode.isScreenLocked,
       sourceId: isOpen ? tab.xydriveSourceId : undefined,
       folders: isOpen ? getXydriveMounts(global.settings.byKey.xydriveMounts, global.currentUserId) : undefined,

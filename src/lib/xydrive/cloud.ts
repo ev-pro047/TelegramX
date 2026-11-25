@@ -4,7 +4,7 @@ export const XYDRIVE_REGISTRY_TITLE = 'Xydrive Registry';
 export const XYDRIVE_REGISTRY_ABOUT = 'Xydrive private metadata registry v1. Do not share or delete.';
 const PREFIX = 'XYDRIVE_REGISTRY_V1 ';
 const MAX_PARTS = 128;
-const PART_SIZE = 2600;
+const PART_SIZE = 1800;
 const MAX_OPERATIONS = 10000;
 const KEYS = ['folders', 'parents', 'labels', 'folderLabels'] as const;
 type Key = (typeof KEYS)[number];
@@ -16,7 +16,7 @@ export type CloudSnapshot = {
 };
 type Value = XydriveMount | string | XydriveFileLabel | XydriveFolderLabel | null;
 export type CloudChange = { key: Key; id: string; before: Value; after: Value };
-export type CloudBase = { ownerId: string; registryId: string; snapshot: CloudSnapshot };
+export type CloudBase = { ownerId: string; registryId: string; snapshot: CloudSnapshot; journalId: number };
 export type CloudSyncStatus = 'checking' | 'setup' | 'syncing' | 'synced' | 'error' | 'conflict';
 type Part = { owner: string; tx: string; part: number; total: number; data: string };
 type Commit = { owner: string; tx: string; commit: true; total: number };
@@ -62,7 +62,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 function isId(value: unknown): value is string {
-  return typeof value === 'string' && /^-?\\d{1,24}$/.test(value);
+  return typeof value === 'string' && /^-?\d{1,24}$/.test(value);
 }
 
 function validValue(key: Key, id: string, value: unknown): boolean {
@@ -92,7 +92,7 @@ function validChange(value: unknown): value is CloudChange {
   if (!isObject(value) || !KEYS.includes(value.key as Key) || typeof value.id !== 'string') return false;
   const key = value.key as Key;
   const id = value.id;
-  if (key === 'labels' ? !/^-?\\d{1,24}:\\d{1,16}:(photo|video|audio|voice|document|sticker)$/.test(id)
+  if (key === 'labels' ? !/^-?\d{1,24}:\d{1,16}:(photo|video|audio|voice|document|sticker)$/.test(id)
     : !isId(id)) return false;
   return validValue(key, id, value.before) && validValue(key, id, value.after);
 }
@@ -133,7 +133,7 @@ export function encodeCloudTransaction(owner: string, tx: string, changes: Cloud
   let offset = 0;
   while (offset < json.length) {
     let end = Math.min(offset + PART_SIZE, json.length);
-    if (end < json.length && /[\\uD800-\\uDBFF]/.test(json[end - 1])) end--;
+    if (end < json.length && /[\uD800-\uDBFF]/.test(json[end - 1])) end--;
     parts.push(json.slice(offset, end));
     offset = end;
   }
@@ -145,11 +145,12 @@ export function encodeCloudTransaction(owner: string, tx: string, changes: Cloud
 }
 
 export function replayCloudJournal(owner: string, records: { id: number; text: string }[]):
-{ status: 'ready'; snapshot: CloudSnapshot } | { status: 'conflict' } {
+{ status: 'ready'; snapshot: CloudSnapshot; journalId: number } | { status: 'conflict' } {
   let snapshot = emptyCloudSnapshot();
+  let journalId = 0;
   const pending = new Map<string, Map<number, Part>>();
   const finished = new Set<string>();
-  for (const { text } of records.slice().sort((a, b) => a.id - b.id)) {
+  for (const { id, text } of records.slice().sort((a, b) => a.id - b.id)) {
     if (!text.startsWith(PREFIX)) continue;
     try {
       const raw: unknown = JSON.parse(text.slice(PREFIX.length));
@@ -168,6 +169,7 @@ export function replayCloudJournal(owner: string, records: { id: number; text: s
         const next = applyCloudChanges(snapshot, changes);
         if (!next) return { status: 'conflict' };
         snapshot = next;
+        journalId = id;
         pending.delete(record.tx);
         finished.add(record.tx);
       } else {
@@ -182,5 +184,16 @@ export function replayCloudJournal(owner: string, records: { id: number; text: s
       return { status: 'conflict' };
     }
   }
-  return { status: 'ready', snapshot };
+  return { status: 'ready', snapshot, journalId };
+}
+
+export function verifyCloudCheckpoint(owner: string, records: { id: number; text: string }[], base: CloudBase) {
+  if (base.ownerId !== owner || !Number.isSafeInteger(base.journalId) || base.journalId < 0) return false;
+  const checkpoint = replayCloudJournal(owner, records.filter(({ id }) => id <= base.journalId));
+  return checkpoint.status === 'ready' && checkpoint.journalId === base.journalId
+    && sameCloudSnapshot(checkpoint.snapshot, base.snapshot);
+}
+
+export function cloudChangesConfirmed(snapshot: CloudSnapshot, changes: CloudChange[]) {
+  return changes.every(({ key, id, after }) => stable(snapshot[key][id] ?? null) === stable(after));
 }
