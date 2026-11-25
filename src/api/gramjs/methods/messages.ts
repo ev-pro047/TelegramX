@@ -284,9 +284,23 @@ async function verifyPrivateRegistry(ownerId: string, channel: ApiChat) {
     channel: buildInputChannel(verified.id, verified.accessHash),
   }), { shouldThrow: true });
   if (!result || !(result.fullChat instanceof GramJs.ChannelFull)
-    || result.fullChat.about !== XYDRIVE_REGISTRY_ABOUT || result.fullChat.participantsCount !== 1
+    || result.fullChat.about !== XYDRIVE_REGISTRY_ABOUT
     || result.fullChat.linkedChatId || !isXydriveCurrentAccount(ownerId)) return undefined;
-  return verified;
+  // participantsCount is optional in Telegram's ChannelFull. If omitted, require
+  // positive proof from the participant endpoint rather than relaxing privacy.
+  if (result.fullChat.participantsCount === undefined) {
+    const participants = await invokeRequest(new GramJs.channels.GetParticipants({
+      channel: buildInputChannel(verified.id, verified.accessHash),
+      filter: new GramJs.ChannelParticipantsRecent(), offset: 0, limit: 2, hash: DEFAULT_PRIMITIVES.BIGINT,
+    }), { shouldThrow: true });
+    if (!(participants instanceof GramJs.channels.ChannelParticipants) || participants.count !== 1
+      || participants.participants.length !== 1
+      || !(participants.participants[0] instanceof GramJs.ChannelParticipantCreator)
+      || participants.participants[0].userId.toString() !== ownerId) return undefined;
+  } else if (result.fullChat.participantsCount !== 1) {
+    return undefined;
+  }
+  return isXydriveCurrentAccount(ownerId) ? verified : undefined;
 }
 
 export async function readXydriveRegistry({ ownerId, channel }: { ownerId: string; channel: ApiChat }) {

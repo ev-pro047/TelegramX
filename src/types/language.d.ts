@@ -3587,6 +3587,10 @@ export interface LangPair {
   'XydriveCloudSynced': undefined;
   'XydriveCloudChecking': undefined;
   'XydriveCloudError': undefined;
+  'XydriveCloudDiscoveryError': undefined;
+  'XydriveCloudRegistryError': undefined;
+  'XydriveCloudCreationError': undefined;
+  'XydriveCloudWriteError': undefined;
   'XydriveCloudConflict': undefined;
   'XydriveBeta': undefined;
   'XydriveEnable': undefined;

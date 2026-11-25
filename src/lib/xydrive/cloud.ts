@@ -17,7 +17,8 @@ export type CloudSnapshot = {
 type Value = XydriveMount | string | XydriveFileLabel | XydriveFolderLabel | null;
 export type CloudChange = { key: Key; id: string; before: Value; after: Value };
 export type CloudBase = { ownerId: string; registryId: string; snapshot: CloudSnapshot; journalId: number };
-export type CloudSyncStatus = 'checking' | 'setup' | 'syncing' | 'synced' | 'error' | 'conflict';
+export type CloudSyncStatus = 'checking' | 'setup' | 'syncing' | 'synced' | 'error' | 'conflict'
+  | 'discovery-error' | 'registry-error' | 'creation-error' | 'write-error';
 type Part = { owner: string; tx: string; part: number; total: number; data: string };
 type Commit = { owner: string; tx: string; commit: true; total: number };
 

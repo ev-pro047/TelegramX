@@ -539,40 +539,43 @@ addActionHandler('syncXydriveCloud', async (global, actions, payload): Promise<v
     if (active()) setGlobal(updateTabState(getGlobal(), { xydriveCloudStatus: value }, tabId));
   };
   status('checking');
+  let failure: CloudSyncStatus = 'discovery-error';
   try {
     let channel = registryByAccount.get(ownerId);
     if (!channel || shouldCreate) {
       const discovered = await callApi('discoverXydriveRegistry', { ownerId });
       if (!active()) return;
       if (discovered?.status === 'conflict') { status('conflict'); return; }
-      if (discovered?.status === 'error' || !discovered) { status('error'); return; }
+      if (discovered?.status === 'error' || !discovered) { status('discovery-error'); return; }
       if (discovered.status === 'found') channel = discovered.channel;
       else if (shouldCreate) {
-        if (creationAttempted.has(ownerId)) { status('error'); return; }
+        if (creationAttempted.has(ownerId)) { status('creation-error'); return; }
+        failure = 'creation-error';
         creationAttempted.add(ownerId);
         const created = await callApi('createXydriveRegistry', { ownerId });
         if (!active()) return;
         channel = created?.channel;
-        if (!channel) { status('error'); return; }
+        if (!channel) { status('creation-error'); return; }
         setGlobal(updateChat(getGlobal(), channel.id, channel));
         // Require a fresh discovery before the first write, including duplicate detection.
         const check = await callApi('discoverXydriveRegistry', { ownerId });
         if (!active()) return;
         if (check?.status !== 'found' || check.channel.id !== channel.id) {
-          status(check?.status === 'conflict' ? 'conflict' : 'error'); return;
+          status(check?.status === 'conflict' ? 'conflict' : 'discovery-error'); return;
         }
         channel = check.channel;
       } else {
         status(getGlobal().settings.byKey.xydriveCloudBase?.ownerId === ownerId || creationAttempted.has(ownerId)
-          ? 'error' : 'setup');
+          ? 'registry-error' : 'setup');
         return;
       }
       registryByAccount.set(ownerId, channel);
     }
     status('syncing');
+    failure = 'registry-error';
     const records = await callApi('readXydriveRegistry', { ownerId, channel });
     if (!active()) return;
-    if (!records) { registryByAccount.delete(ownerId); status('error'); return; }
+    if (!records) { registryByAccount.delete(ownerId); status('registry-error'); return; }
     const remote = replayCloudJournal(ownerId, records);
     if (remote.status !== 'ready') { status('conflict'); return; }
     global = getGlobal();
@@ -589,6 +592,7 @@ addActionHandler('syncXydriveCloud', async (global, actions, payload): Promise<v
     let confirmed = remote.snapshot;
     let journalId = remote.journalId;
     if (pending.length) {
+      failure = 'write-error';
       const tx = crypto.randomUUID();
       const encoded = encodeCloudTransaction(ownerId, tx, pending);
       if (!active() || !sameCloudSnapshot(local, getLocalCloudSnapshot(getGlobal(), ownerId))) {
@@ -599,14 +603,14 @@ addActionHandler('syncXydriveCloud', async (global, actions, payload): Promise<v
       // Even ambiguous sends are reconciled only from a confirmed server read; never overwrite a snapshot.
       const refreshed = await callApi('readXydriveRegistry', { ownerId, channel });
       if (!active()) return;
-      if (!refreshed) { status('error'); return; }
+      if (!refreshed) { status('write-error'); return; }
       const replayed = replayCloudJournal(ownerId, refreshed);
       if (replayed.status !== 'ready') { status('conflict'); return; }
       if (!verifyCloudCheckpoint(ownerId, refreshed, { ownerId, registryId: channel.id,
         snapshot: remote.snapshot, journalId: remote.journalId })) { status('conflict'); return; }
       confirmed = replayed.snapshot;
       journalId = replayed.journalId;
-      if (!cloudChangesConfirmed(confirmed, pending)) { status('error'); return; }
+      if (!cloudChangesConfirmed(confirmed, pending)) { status('write-error'); return; }
     }
     global = getGlobal();
     const newer = getLocalCloudSnapshot(global, ownerId);
@@ -632,7 +636,7 @@ addActionHandler('syncXydriveCloud', async (global, actions, payload): Promise<v
     }
     setGlobal(updateTabState(global, { xydriveCloudStatus: sameCloudSnapshot(final, confirmed) ? 'synced' : 'error' }, tabId));
   } catch {
-    status('error');
+    status(failure);
   } finally {
     cloudBusy.delete(ownerId);
   }

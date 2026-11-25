@@ -976,25 +976,63 @@ export async function createXydriveRegistry({ ownerId }: { ownerId: string }) {
 
 export async function discoverXydriveRegistry({ ownerId }: { ownerId: string }) {
   const candidates = new Map<string, ApiChat>();
-  for (const archived of [false, true]) {
-    let offsetPeer: ApiPeer | undefined;
-    let offsetId: number | undefined;
-    let offsetDate: number | undefined;
+  const collect = (chats: GramJs.TypeChat[]) => {
+    for (const raw of chats) {
+      if (!(raw instanceof GramJs.Channel) || raw.title !== XYDRIVE_REGISTRY_TITLE || !raw.creator) continue;
+      const channel = buildApiChatFromPreview(raw);
+      if (channel) candidates.set(channel.id, channel);
+    }
+  };
+  // Registry discovery must use raw dialog cursors. The UI chat list filters dialogs
+  // and converts messages, so its pagination can lose a service-message cursor.
+  for (const folderId of [ALL_FOLDER_ID, ARCHIVED_FOLDER_ID]) {
+    if (!isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
+    const pinned = await invokeRequest(new GramJs.messages.GetPinnedDialogs({ folderId }));
+    if (!pinned || !isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
+    collect(pinned.chats);
+    let offsetPeer: GramJs.TypeInputPeer = new GramJs.InputPeerEmpty();
+    let offsetId = 0;
+    let offsetDate = 0;
+    const seen = new Set<string>();
     let complete = false;
     for (let page = 0; page < 40; page++) {
       if (!isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
-      const result = await fetchChats({ limit: 100, archived, offsetPeer, offsetId, offsetDate, withPinned: page === 0 });
-      if (!result) return { status: 'error' as const };
-      for (const chat of result.chats) {
-        if (chat.title === XYDRIVE_REGISTRY_TITLE) candidates.set(chat.id, chat);
+      const result = await invokeRequest(new GramJs.messages.GetDialogs({
+        hash: DEFAULT_PRIMITIVES.BIGINT, folderId, excludePinned: true,
+        offsetPeer, offsetId, offsetDate, limit: 100,
+      }));
+      if (!result || result instanceof GramJs.messages.DialogsNotModified
+        || !isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
+      collect(result.chats);
+      if (result instanceof GramJs.messages.Dialogs || result.dialogs.length === 0) {
+        complete = true;
+        break;
       }
-      if (!result.nextOffsetId) { complete = true; break; }
-      const nextPeer = [...result.chats, ...result.users].find(({ id }) => id === result.nextOffsetPeerId);
-      if (!nextPeer || result.nextOffsetDate === undefined) return { status: 'error' as const };
-      if (offsetId === result.nextOffsetId && offsetPeer?.id === nextPeer.id) return { status: 'error' as const };
-      offsetPeer = nextPeer;
-      offsetId = result.nextOffsetId;
-      offsetDate = result.nextOffsetDate;
+      const last = result.dialogs.slice().reverse().find(
+        (dialog): dialog is GramJs.Dialog => dialog instanceof GramJs.Dialog && dialog.topMessage > 0,
+      );
+      if (!last) return { status: 'error' as const };
+      const id = getApiChatIdFromMtpPeer(last.peer);
+      const top = result.messages.find((message): message is GramJs.Message | GramJs.MessageService =>
+        (message instanceof GramJs.Message || message instanceof GramJs.MessageService)
+        && message.id === last.topMessage && getApiChatIdFromMtpPeer(message.peerId) === id);
+      if (!top || top.date <= 0) return { status: 'error' as const };
+      const cursor = `${id}:${last.topMessage}:${top.date}`;
+      if (seen.has(cursor)) return { status: 'error' as const };
+      seen.add(cursor);
+      const entity = preparePeers(result)[getPeerKey(last.peer)];
+      if (id === ownerId) {
+        offsetPeer = new GramJs.InputPeerSelf();
+      } else if (entity instanceof GramJs.User || entity instanceof GramJs.Channel) {
+        if (entity.accessHash === undefined) return { status: 'error' as const };
+        offsetPeer = buildInputPeer(id, entity.accessHash.toString());
+      } else if (entity instanceof GramJs.Chat) {
+        offsetPeer = buildInputPeer(id);
+      } else {
+        return { status: 'error' as const };
+      }
+      offsetId = last.topMessage;
+      offsetDate = top.date;
     }
     if (!complete) return { status: 'error' as const };
   }

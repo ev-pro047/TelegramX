@@ -493,9 +493,12 @@ const Xydrive = ({
               <p className={styles.notice} role="status">
                 {lang(cloudStatus === 'setup' ? 'XydriveCloudSetup' : cloudStatus === 'synced' ? 'XydriveCloudSynced'
                   : cloudStatus === 'conflict' ? 'XydriveCloudConflict' : cloudStatus === 'error' ? 'XydriveCloudError'
-                    : 'XydriveCloudChecking')}
+                    : cloudStatus === 'discovery-error' ? 'XydriveCloudDiscoveryError'
+                      : cloudStatus === 'registry-error' ? 'XydriveCloudRegistryError'
+                        : cloudStatus === 'creation-error' ? 'XydriveCloudCreationError'
+                          : cloudStatus === 'write-error' ? 'XydriveCloudWriteError' : 'XydriveCloudChecking')}
                 {' '}
-                {(cloudStatus === 'setup' || cloudStatus === 'error' || cloudStatus === 'conflict') && (
+                {(cloudStatus === 'setup' || cloudStatus === 'error' || cloudStatus.endsWith('-error') || cloudStatus === 'conflict') && (
                   <Button size="tiny" color="translucent" noFastClick onClick={() => onCloudSync(cloudStatus === 'setup')}>
                     {lang(cloudStatus === 'setup' ? 'XydriveCloudEnable' : 'XydriveRetry')}
                   </Button>

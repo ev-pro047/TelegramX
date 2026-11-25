@@ -5004,3 +5004,8 @@
 "XydriveCloudChecking" = "Checking cloud metadata…";
 "XydriveCloudError" = "Cloud sync unavailable. Local changes are not confirmed in the cloud.";
 "XydriveCloudConflict" = "Cloud metadata conflict. Local data is preserved. Do not delete the registry.";
+
+"XydriveCloudDiscoveryError" = "Could not finish checking Telegram for the registry. Retry; no new registry was created by this check.";
+"XydriveCloudRegistryError" = "Could not verify or read the private Xydrive Registry. Ensure it is private, owned by you and has no other members.";
+"XydriveCloudCreationError" = "Registry creation could not be confirmed. Check Telegram for Xydrive Registry before attempting setup again.";
+"XydriveCloudWriteError" = "Metadata upload could not be confirmed. Local changes are preserved. Retry before logging out.";
