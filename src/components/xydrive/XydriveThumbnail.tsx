@@ -29,6 +29,9 @@ const XydriveThumbnail = ({ file, icon, observe }: OwnProps) => {
   const isIntersecting = useIsIntersecting(ref, observe);
   const url = useMedia(file.thumbnailHash, !isIntersecting);
   const format = getFileFormat(file);
+  // Source-code extensions can be mislabeled by generic MIME/category detection.
+  const displayIcon = /^(PDF|DOCX?|RTF|TXT|XLSX?|CSV|PPTX?|CSS|SCSS|JSX?|TSX?|JSON|HTML|XML|SVG|PY|MD)$/.test(format)
+    ? 'document' : /^(ZIP|RAR|7Z|TAR|GZ|BZ2|XZ)$/.test(format) ? 'archive' : icon;
   const hash = file.thumbnailHash;
   useEffect(() => {
     if (!hash || url || !isIntersecting) return undefined;
@@ -43,6 +46,7 @@ const XydriveThumbnail = ({ file, icon, observe }: OwnProps) => {
       ref={ref}
       className={buildClassName(styles.thumbnail, styles[file.category])}
       data-format={format || undefined}
+      data-has-image={hasImage ? 'true' : undefined}
       data-loading={hash && isIntersecting && !url && timedOutHash !== hash ? 'true' : undefined}
       aria-hidden="true"
     >
@@ -55,10 +59,10 @@ const XydriveThumbnail = ({ file, icon, observe }: OwnProps) => {
           onError={() => setFailedUrl(url)}
         />
       ) : (
-        <>
-          <Icon name={icon} className={styles.fileIcon} />
+        <span className={styles.fileIconTile}>
+          <Icon name={displayIcon} className={styles.fileIcon} />
           {format && <small>{format}</small>}
-        </>
+        </span>
       )}
     </div>
   );

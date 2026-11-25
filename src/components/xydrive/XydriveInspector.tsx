@@ -6,6 +6,7 @@ import type { XydriveFile } from '../../lib/xydrive/types';
 import { CATEGORY_LABELS, getFileFormat, getFileIcon, summarizeXydriveItems } from '../../lib/xydrive/collection';
 import { enqueueXydriveDownload } from '../../lib/xydrive/transfers';
 import { formatFileSize } from '../../util/text/textFormat';
+import buildClassName from '../../util/buildClassName';
 
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
 import useLang from '../../hooks/useLang';
@@ -49,15 +50,17 @@ const XydriveInspector = ({
     <div ref={contentRef} className={styles.inspectorBody}>
       {item ? (
         <>
-          {file ? <XydriveThumbnail file={file} icon={getFileIcon(file.category)} observe={observe} />
-            : (
-              <span className={styles.folderGlyph} data-tone={item.kind === 'folder' ? item.tone : undefined}>
-                <Icon name={folder?.isManaged ? 'folder-filled' : 'folder'} />
-              </span>
-            )}
-          <div className={styles.inspectorIdentity}>
-            <h2 className={styles.inspectorName} dir="auto">{item.name}</h2>
-            <span className={styles.itemMeta}>{format || type}</span>
+          <div className={styles.inspectorLead}>
+            {file ? <XydriveThumbnail file={file} icon={getFileIcon(file.category)} observe={observe} />
+              : (
+                <span className={styles.folderGlyph} data-tone={item.kind === 'folder' ? item.tone : undefined}>
+                  <Icon name={folder?.isManaged ? 'folder-filled' : 'folder'} />
+                </span>
+              )}
+            <div className={styles.inspectorIdentity}>
+              <h2 className={styles.inspectorName} dir="auto">{item.name}</h2>
+              <span className={styles.itemMeta}>{format || type}</span>
+            </div>
           </div>
           <dl className={styles.metadata}>
             {file && item.name !== file.name && (
@@ -161,7 +164,8 @@ const XydriveInspector = ({
       hasCloseButton
       title={lang('XydriveDetails')}
       onClose={onClose}
-      dialogClassName={workspaceStyles.sheetFrame}
+      isCondensedHeader
+      dialogClassName={buildClassName(workspaceStyles.sheetFrame, styles.detailsSheet)}
     >
       {content}
     </Modal>

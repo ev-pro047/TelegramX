@@ -1045,8 +1045,276 @@
   }
 
   .folderGrid .itemMain {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     gap: 0.375rem;
   }
+}
+
+// Card-only workspace polish. Action hit areas remain independent of the main card.
+.grid .item,
+.folderGrid .item {
+  position: relative;
+  overflow: hidden;
+  align-content: start;
+  background: var(--color-background);
+  box-shadow: inset 0 0 0 1px var(--xydrive-divider), 0 2px 5px #00000006;
+}
+
+.grid .item,
+.folderGrid .item {
+  grid-template: 'select flags more' auto 'main main main' 1fr / auto minmax(0, 1fr) auto;
+}
+
+.grid .select,
+.grid .more,
+.folderGrid .select,
+.folderGrid .more {
+  align-self: start;
+  opacity: 1 !important;
+}
+
+.grid .flags,
+.folderGrid .flags {
+  justify-content: center;
+  align-self: center;
+  pointer-events: none;
+}
+
+.grid .preview {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: calc(var(--xydrive-control, 2.5rem) + 0.25rem);
+  inset-inline-end: 0.375rem;
+  width: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  border-radius: 0.5rem;
+  color: var(--color-primary);
+  background: var(--color-background);
+  box-shadow: 0 1px 5px #00000018;
+}
+
+@media (pointer: coarse) {
+  .grid .preview {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+.grid .itemMain {
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0 0.5rem 0.75rem;
+}
+
+.folderGrid .itemMain {
+  flex-direction: row;
+  align-items: center;
+  align-self: start;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 0.5rem 0.625rem;
+}
+
+.folderGrid .folderGlyph {
+  width: 2rem;
+  height: 2rem;
+  min-height: 2rem;
+}
+
+.grid .itemCopy {
+  padding-inline: 0.125rem;
+}
+
+.grid .itemName,
+.folderGrid .itemName {
+  font-weight: var(--font-weight-medium);
+  line-height: 1.35;
+}
+
+.grid .thumbnail {
+  aspect-ratio: auto;
+  height: 4.5rem;
+  background: transparent;
+}
+
+.grid .thumbnail[data-has-image='true'] {
+  aspect-ratio: 16 / 10;
+  height: auto;
+  background: var(--color-background-secondary);
+}
+
+.fileIconTile {
+  display: grid;
+  gap: 0.125rem;
+  place-content: center;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.875rem;
+  color: var(--file-accent, #4779ac);
+  background: var(--file-tint, #4779ac20);
+  box-shadow: 0 3px 9px var(--file-shadow, #4779ac24);
+}
+
+.fileIconTile .fileIcon {
+  font-size: 1.45rem;
+}
+
+.fileIconTile small {
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+}
+
+.thumbnail {
+  --file-accent: #4779ac;
+  --file-tint: #4779ac20;
+  --file-shadow: #4779ac24;
+  color: var(--file-accent);
+}
+
+.thumbnail.images { --file-accent: #a66aca; --file-tint: #a66aca20; --file-shadow: #a66aca26; }
+.thumbnail.videos { --file-accent: #7778d5; --file-tint: #7778d520; --file-shadow: #7778d526; }
+.thumbnail.audio { --file-accent: #24968b; --file-tint: #24968b20; --file-shadow: #24968b26; }
+.thumbnail.archives,
+.thumbnail:is([data-format='ZIP'], [data-format='RAR'], [data-format='7Z'], [data-format='TAR'], [data-format='GZ']) {
+  --file-accent: #c48a19; --file-tint: #e8ae2524; --file-shadow: #c48a1929;
+}
+.thumbnail[data-format='PDF'] {
+  --file-accent: #d64c50; --file-tint: #d64c501c; --file-shadow: #d64c5026;
+}
+.thumbnail:is([data-format='DOC'], [data-format='DOCX'], [data-format='RTF']) {
+  --file-accent: #347ed2; --file-tint: #347ed220; --file-shadow: #347ed226;
+}
+.thumbnail:is([data-format='XLS'], [data-format='XLSX'], [data-format='CSV']) {
+  --file-accent: #299458; --file-tint: #29945820; --file-shadow: #29945826;
+}
+.thumbnail:is([data-format='PPT'], [data-format='PPTX']) {
+  --file-accent: #dc763c; --file-tint: #dc763c20; --file-shadow: #dc763c26;
+}
+.thumbnail:is([data-format='CSS'], [data-format='SCSS'], [data-format='JS'], [data-format='JSX'],
+  [data-format='TS'], [data-format='TSX'], [data-format='JSON'], [data-format='HTML'],
+  [data-format='XML'], [data-format='PY'], [data-format='MD']) {
+  --file-accent: #218eb8; --file-tint: #218eb820; --file-shadow: #218eb826;
+}
+
+.grid .item.selected,
+.folderGrid .item.selected {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 65%, var(--xydrive-divider)),
+    0 2px 6px #3390ec12;
+}
+
+.selected .checkbox {
+  background: var(--color-primary);
+  color: var(--color-white, #fff);
+  border-color: var(--color-primary);
+}
+
+.inspectorLead {
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.inspectorLead .thumbnail,
+.inspectorLead .folderGlyph {
+  flex: 0 0 3.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  aspect-ratio: 1;
+  background: transparent;
+}
+
+.inspectorLead .folderGlyph {
+  background: var(--xydrive-selected);
+}
+
+.inspectorIdentity {
+  min-width: 0;
+  flex: 1;
+}
+
+.inspectorBody {
+  gap: 0.5rem;
+  padding: 0.625rem;
+}
+
+.metadata {
+  gap: 0.375rem 0.5rem;
+  padding: 0.625rem;
+}
+
+.detailsSheet,
+.actionSheet {
+  max-height: min(78vh, 35rem);
+  max-height: min(78dvh, 35rem);
+}
+
+.detailsSheet :global(.modal-header),
+.actionSheet :global(.modal-header) {
+  min-height: 3rem;
+  padding: 0.375rem 0.75rem !important;
+}
+
+.detailsSheet :global(.modal-title),
+.actionSheet :global(.modal-title) {
+  margin-inline: 0.5rem;
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.detailsSheet :global(.modal-content),
+.actionSheet :global(.modal-content) {
+  padding: 0.25rem 0.75rem max(0.625rem, env(safe-area-inset-bottom));
+}
+
+.detailsSheet .inspectorBody {
+  padding: 0.375rem 0;
+}
+
+.actionSheet .menuSheet :global(.MenuItem),
+.compactMenu :global(.MenuItem) {
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  white-space: normal;
+}
+
+.actionSheet .menuSheet :global(.MenuItem .icon),
+.compactMenu :global(.MenuItem .icon) {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.compactMenu {
+  padding: 0.25rem;
+}
+
+.menuLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.activeMenuItem {
+  color: var(--color-primary) !important;
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-background)) !important;
+  border-radius: 0.5rem;
+}
+
+.menuCheck {
+  color: var(--color-primary);
+  margin-inline-start: auto !important;
+}
+
+.compactMenu :global(.MenuItem):focus-visible {
+  outline: 2px solid #3390ec80 !important;
+  outline-offset: -2px;
 }

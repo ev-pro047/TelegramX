@@ -6,7 +6,7 @@
   --xydrive-radius: 0.625rem;
   --xydrive-card-radius: 0.875rem;
   --xydrive-canvas: color-mix(in srgb, var(--color-background-secondary) 55%, var(--color-background));
-  --xydrive-selected: color-mix(in srgb, var(--color-primary) 12%, var(--color-background));
+  --xydrive-selected: color-mix(in srgb, var(--color-primary) 8%, var(--color-background));
   --xydrive-divider: color-mix(in srgb, var(--color-borders) 72%, transparent);
 }
 
@@ -555,9 +555,12 @@
     font-size: 1.0625rem;
   }
 
-  .navigationActions,
+  .navigationActions {
+    gap: 0.125rem;
+  }
+
   .actions {
-    gap: 0;
+    gap: 0.25rem;
   }
 
   .crumb {
@@ -626,5 +629,30 @@
   .indexStatus,
   .more {
     transition: background-color 120ms ease;
+  }
+}
+
+// Keep focus styling local to Xydrive, including its portaled sheets.
+// A tap is not a keyboard navigation cue; keyboard focus remains visible.
+.page,
+.dialogFrame,
+.sheetFrame {
+  :is(button, a, [role='button'], [role='menuitem'], input, select, textarea) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :is(button, a, [role='button'], [role='menuitem']):focus {
+    outline: none !important;
+  }
+
+  :is(button, a, [role='button'], [role='menuitem']):focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 60%, #3390ec) !important;
+    outline-offset: -2px;
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    :is(button, a, [role='button'], [role='menuitem']):focus-visible {
+      outline-color: color-mix(in srgb, #3390ec 38%, transparent) !important;
+    }
   }
 }

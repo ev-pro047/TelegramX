@@ -357,7 +357,8 @@ const XydriveExplorer = ({
           hasCloseButton
           title={item.name}
           onClose={closeActions}
-          dialogClassName={workspaceStyles.sheetFrame}
+          isCondensedHeader
+          dialogClassName={buildClassName(workspaceStyles.sheetFrame, styles.actionSheet)}
         >
           <div className={styles.menuSheet} onClick={closeActions}>{actions}</div>
         </Modal>
@@ -370,6 +371,7 @@ const XydriveExplorer = ({
         autoClose
         withPortal
         withMaxHeight
+        bubbleClassName={styles.compactMenu}
         ariaLabel={lang('XydriveActionsNamed', { name: item.name })}
         anchor={() => {
           const rect = menuAnchorRef.current!.getBoundingClientRect();
@@ -409,6 +411,7 @@ const XydriveExplorer = ({
           <div className={styles.controls}>
             <DropdownMenu
               withPortal
+              bubbleClassName={styles.compactMenu}
               trigger={({ onTrigger, isOpen }) => (
                 <button
                   type="button"
@@ -446,6 +449,7 @@ const XydriveExplorer = ({
             </DropdownMenu>
             <DropdownMenu
               withPortal
+              bubbleClassName={styles.compactMenu}
               trigger={({ onTrigger, isOpen }) => (
                 <button
                   type="button"
@@ -459,19 +463,34 @@ const XydriveExplorer = ({
               )}
             >
               {isRecent && (
-                <MenuItem onClick={() => setOrdering('opened', direction)}>{lang('XydriveLastOpened')}</MenuItem>
+                <MenuItem className={sort === 'opened' ? styles.activeMenuItem : undefined}
+                  onClick={() => setOrdering('opened', direction)}
+                >
+                  <span className={styles.menuLabel}>{lang('XydriveLastOpened')}</span>
+                  {sort === 'opened' && <Icon name="check" className={styles.menuCheck} />}
+                </MenuItem>
               )}
               {SORT_FIELDS.map(([field, key]) => (
-                <MenuItem key={field} onClick={() => setOrdering(field, direction)}>
-                  {lang(key)}
-                  {sort === field && <Icon name="check" />}
+                <MenuItem key={field} className={sort === field ? styles.activeMenuItem : undefined}
+                  onClick={() => setOrdering(field, direction)}
+                >
+                  <span className={styles.menuLabel}>{lang(key)}</span>
+                  {sort === field && <Icon name="check" className={styles.menuCheck} />}
                 </MenuItem>
               ))}
               <MenuSeparator />
               <div className={styles.extensionField}>{lang('XydrivePinnedOrder')}</div>
-              <MenuItem icon="up" onClick={() => setOrdering(sort, 'asc')}>{lang('XydriveAscendingShort')}</MenuItem>
-              <MenuItem icon="down" onClick={() => setOrdering(sort, 'desc')}>
-                {lang('XydriveDescendingShort')}
+              <MenuItem icon="up" className={direction === 'asc' ? styles.activeMenuItem : undefined}
+                onClick={() => setOrdering(sort, 'asc')}
+              >
+                <span className={styles.menuLabel}>{lang('XydriveAscendingShort')}</span>
+                {direction === 'asc' && <Icon name="check" className={styles.menuCheck} />}
+              </MenuItem>
+              <MenuItem icon="down" className={direction === 'desc' ? styles.activeMenuItem : undefined}
+                onClick={() => setOrdering(sort, 'desc')}
+              >
+                <span className={styles.menuLabel}>{lang('XydriveDescendingShort')}</span>
+                {direction === 'desc' && <Icon name="check" className={styles.menuCheck} />}
               </MenuItem>
             </DropdownMenu>
           </div>
@@ -488,6 +507,7 @@ const XydriveExplorer = ({
             </div>
             <DropdownMenu
               withPortal
+              bubbleClassName={styles.compactMenu}
               trigger={({ onTrigger }) => (
                 <button
                   type="button"
