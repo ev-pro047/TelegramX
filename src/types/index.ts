@@ -53,6 +53,7 @@ import type {
 } from '../api/types';
 import type { DC_IDS } from '../config';
 import type { XydriveMountRegistry, XydriveOrganization } from '../lib/xydrive/types';
+import type { CloudBase } from '../lib/xydrive/cloud';
 import type { SearchResultKey } from '../util/keys/searchResultKey';
 import type { IconName } from './icons';
 import type { RegularLangKey } from './language';
@@ -162,6 +163,7 @@ export type TimeFormat = '24h' | '12h';
 export interface AccountSettings {
   xydriveMounts?: XydriveMountRegistry;
   xydriveOrganization?: XydriveOrganization;
+  xydriveCloudBase?: CloudBase;
   hasWebNotifications: boolean;
   hasPushNotifications: boolean;
   shouldShowPushPreviewsWhenLocked: boolean;

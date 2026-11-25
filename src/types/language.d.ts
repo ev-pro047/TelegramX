@@ -3582,6 +3582,12 @@ export interface LangPair {
   'SettingsKeywordsShortcuts': undefined;
   'SettingsSearchEmpty': undefined;
   'XydriveTitle': undefined;
+  'XydriveCloudSetup': undefined;
+  'XydriveCloudEnable': undefined;
+  'XydriveCloudSynced': undefined;
+  'XydriveCloudChecking': undefined;
+  'XydriveCloudError': undefined;
+  'XydriveCloudConflict': undefined;
   'XydriveBeta': undefined;
   'XydriveEnable': undefined;
   'XydriveExperimentalDesc': undefined;

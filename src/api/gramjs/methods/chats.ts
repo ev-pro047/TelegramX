@@ -101,6 +101,7 @@ import {
 import {
   dispatchErrorUpdate, handleGramJsUpdate, invokeRequest, isXydriveCurrentAccount, uploadAvatar,
 } from './client';
+import { XYDRIVE_REGISTRY_ABOUT, XYDRIVE_REGISTRY_TITLE } from '../../../lib/xydrive/cloud';
 import { getPassword } from './twoFaSettings';
 
 type FullChatData = {
@@ -965,9 +966,47 @@ export function updateTopicMutedState({
 }
 
 // A drive folder is an ordinary private broadcast channel, with no invited users.
+// Only explicitly requested registry creation is allowed; discovery must finish first.
+export async function createXydriveRegistry({ ownerId }: { ownerId: string }) {
+  if (!isXydriveCurrentAccount(ownerId)) return undefined;
+  return createChannel({
+    title: XYDRIVE_REGISTRY_TITLE, about: XYDRIVE_REGISTRY_ABOUT, isBroadcast: true,
+  });
+}
+
+export async function discoverXydriveRegistry({ ownerId }: { ownerId: string }) {
+  const candidates = new Map<string, ApiChat>();
+  for (const archived of [false, true]) {
+    let offsetPeer: ApiPeer | undefined;
+    let offsetId: number | undefined;
+    let offsetDate: number | undefined;
+    let complete = false;
+    for (let page = 0; page < 40; page++) {
+      if (!isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
+      const result = await fetchChats({ limit: 100, archived, offsetPeer, offsetId, offsetDate, withPinned: page === 0 });
+      if (!result) return { status: 'error' as const };
+      for (const chat of result.chats) {
+        if (chat.title === XYDRIVE_REGISTRY_TITLE) candidates.set(chat.id, chat);
+      }
+      if (!result.nextOffsetId) { complete = true; break; }
+      const nextPeer = [...result.chats, ...result.users].find(({ id }) => id === result.nextOffsetPeerId);
+      if (!nextPeer || result.nextOffsetDate === undefined) return { status: 'error' as const };
+      if (offsetId === result.nextOffsetId && offsetPeer?.id === nextPeer.id) return { status: 'error' as const };
+      offsetPeer = nextPeer;
+      offsetId = result.nextOffsetId;
+      offsetDate = result.nextOffsetDate;
+    }
+    if (!complete) return { status: 'error' as const };
+  }
+  if (!isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
+  if (candidates.size > 1) return { status: 'conflict' as const };
+  const channel = candidates.values().next().value;
+  return channel ? { status: 'found' as const, channel } : { status: 'missing' as const };
+}
+
 export async function createXydriveChannel({ ownerId, title }: { ownerId: string; title: string }) {
   const name = title.trim();
-  if (!isXydriveCurrentAccount(ownerId) || !name || name.length > 128) return undefined;
+  if (!isXydriveCurrentAccount(ownerId) || !name || name.length > 128 || name === XYDRIVE_REGISTRY_TITLE) return undefined;
   return createChannel({ title: name, isBroadcast: true });
 }
 

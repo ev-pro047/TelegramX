@@ -422,6 +422,7 @@ export interface ActionPayloads {
   setXydriveFolderParent: ({ channelId: string; parentId?: string } & WithTabId);
   mutateXydriveFile: ({ fileIds: string[]; operation: 'delete' | 'move'; destinationId?: string } & WithTabId);
   syncXydriveIndex: WithTabId | undefined;
+  syncXydriveCloud: ({ shouldCreate?: boolean } & WithTabId) | undefined;
   cancelXydriveSync: WithTabId | undefined;
   renameXydriveFolder: ({ folderId: string; title: string } & WithTabId);
   closeXydriveTextPreview: WithTabId | undefined;

@@ -4997,3 +4997,10 @@
 "SettingsGroupAppearance" = "Appearance";
 "SettingsProfileTabs" = "Profile content";
 "TelegramXClientIdentity" = "TelegramX is an unofficial Telegram client.";
+
+"XydriveCloudSetup" = "Enable cloud recovery? Creates a private registry channel for your folder structure and labels. Do not share it.";
+"XydriveCloudEnable" = "Enable cloud sync";
+"XydriveCloudSynced" = "Cloud metadata synced";
+"XydriveCloudChecking" = "Checking cloud metadata…";
+"XydriveCloudError" = "Cloud sync unavailable. Local changes are not confirmed in the cloud.";
+"XydriveCloudConflict" = "Cloud metadata conflict. Local data is preserved. Do not delete the registry.";

@@ -227,6 +227,7 @@ export type TabState = {
   canInstall?: boolean;
   isStatisticsShown?: boolean;
   xydriveOwnerId?: string;
+  xydriveCloudStatus?: import('../../lib/xydrive/cloud').CloudSyncStatus;
   xydriveSourceId?: string;
   xydriveMountRequest?: { id: number; channelId: string };
   xydriveCreateState?: { ownerId: string; requestId: number; status: 'creating' | 'created' | 'error' | 'limit' | 'unverified' };
