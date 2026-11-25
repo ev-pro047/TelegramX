@@ -548,6 +548,8 @@ addActionHandler('syncXydriveCloud', async (global, actions, payload): Promise<v
     cloudMutationTimers.set(ownerId, window.setTimeout(() => {
       cloudMutationTimers.delete(ownerId);
       if (!active()) return;
+      const latestStatus = getGlobal().byTabId[tabId].xydriveCloudStatus;
+      if (latestStatus === 'setup' || latestStatus === 'conflict') return;
       if (cloudBusy.has(ownerId)) cloudMutationPending.set(ownerId, tabId);
       else actions.syncXydriveCloud({ tabId });
     }, 1500));
