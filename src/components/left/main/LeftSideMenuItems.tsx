@@ -11,7 +11,6 @@ import {
   ANIMATION_LEVEL_MIN,
   ARCHIVED_FOLDER_ID,
   BETA_CHANGELOG_URL,
-  FEEDBACK_URL,
   IS_BETA,
   IS_TEST,
   PRODUCTION_HOSTNAME,
@@ -95,7 +94,6 @@ const LeftSideMenuItems = ({
     setSharedSettingOption,
     updatePerformanceSettings,
     openChatByUsername,
-    openUrl,
     openChatWithInfo,
     openSettingsScreen,
     openWalletModal,
@@ -172,10 +170,6 @@ const LeftSideMenuItems = ({
 
   const handleOpenTipsChat = useLastCallback(() => {
     openChatByUsername({ username: lang('TelegramFeaturesUsername') });
-  });
-
-  const handleBugReportClick = useLastCallback(() => {
-    openUrl({ url: FEEDBACK_URL });
   });
 
   return (
@@ -281,12 +275,6 @@ const LeftSideMenuItems = ({
               onClick={handleOpenTipsChat}
             >
               {lang('MenuTelegramFeatures')}
-            </MenuItem>
-            <MenuItem
-              icon="bug"
-              onClick={handleBugReportClick}
-            >
-              {lang('MenuReportBug')}
             </MenuItem>
             {IS_BETA && (
               <MenuItem

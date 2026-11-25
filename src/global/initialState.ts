@@ -112,7 +112,7 @@ export const INITIAL_SHARED_STATE: SharedState = {
     canDisplayChatInTitle: true,
     shouldAllowHttpTransport: true,
     shouldWarnAboutFiles: true,
-    isXydriveEnabled: false,
+    isXydriveEnabled: true,
     shouldKeepLockScreenBackground: true,
   },
   isInitial: true,
