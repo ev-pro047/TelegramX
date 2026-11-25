@@ -194,7 +194,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     TG_TELEGRAM_API_ID: telegramApiId,
     TG_TELEGRAM_API_HASH: telegramApiHash,
     TG_VAPID_KEY: env.VAPID_KEY || '',
-    TG_TEST_SESSION: env.TEST_SESSION || '',
+    TG_TEST_SESSION: appEnv === 'test' ? env.TEST_SESSION || '' : '',
   });
 
   return {
@@ -232,7 +232,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
       headers: responseHeaders,
     },
     build: {
-      sourcemap: true,
+      sourcemap: !isProductionApp,
       assetsInlineLimit: (filePath) => (IMAGE_ASSET_RE.test(filePath) ? false : undefined),
     },
     worker: {

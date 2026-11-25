@@ -30,7 +30,7 @@ export const DEBUG_LOG_FILENAME = 'tt-log.json';
 export const STRICTERDOM_ENABLED = DEBUG;
 export const FORCE_FALLBACK_LANG = DEBUG;
 
-export const BETA_CHANGELOG_URL = 'https://telegra.ph/WebA-Beta-03-20';
+export const BETA_CHANGELOG_URL = 'https://github.com/ev-pro047/TelegramX/blob/main/CHANGELOG.webxy.md';
 
 export const DEBUG_GRAMJS = false;
 

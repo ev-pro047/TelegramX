@@ -96,6 +96,12 @@ A distinct, productivity-focused web client that complements the Telegram ecosys
 This address is a proposal only, subject to Telegram's review and approval. Web XY is not officially affiliated with or endorsed by Telegram.
 
 
+## Licence and upstream acknowledgement
+
+Web XY is based on [Telegram Web A (Ajaxy/telegram-tt)](https://github.com/Ajaxy/telegram-tt). Original authors and contributors retain their attribution. See [LICENSE](LICENSE) for the GPL-3.0-or-later terms and [CHANGELOG.md](CHANGELOG.md) for inherited upstream release history.
+
+See [security and release checks](docs/SECURITY.md) and the [documentation index](docs/README.md) for review scope and known limitations.
+
 <div align="center">
 <img src="assets/readme/footer.svg" alt="Web XY — Beyond conversations" width="100%">
 </div>

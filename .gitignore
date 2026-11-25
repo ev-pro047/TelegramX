@@ -1,7 +1,15 @@
-dist/build-stats.json
+/dist/
+/bundle-stats/
 node_modules
 .cache
 .env
+.env.*
+!.env.example
+*.session
+*.pem
+*.p12
+*.key
+*.log
 src/lib/gramjs/build/
 build-contest/
 tests/
@@ -9,5 +17,3 @@ tests/
 *.iml
 dev/perf/screenshot*
 .DS_store
-.github/workflows/*
-!.github/workflows/package-and-publish.yml
