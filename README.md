@@ -1,13 +1,89 @@
+<div align="center">
+
+<img src="assets/readme/hero.svg" alt="Web XY — Messaging meets productivity" width="100%">
+
 # Web XY
 
-**Unofficial experimental Telegram web client.** Web XY explores a productivity-focused messaging experience with Xydrive, a dedicated file-management workspace.
+**Beyond conversations.**
 
-Xydrive uses Saved Messages as its root and verified private Telegram channels as folders. It offers hierarchical organization, native transfers, supported media previews, search, favorites, pins and indexed storage analytics. Cloud metadata synchronization is experimental and requires runtime validation.
+[Documentation](docs/xydrive-workspace-revision.md) · [Deployment](docs/heroku.md) · [License](LICENSE)
 
-## Status
+An independent, unofficial experimental client for Telegram.
 
-This is an independent prototype, not an official Telegram client. The proposed `web.telegram.org/xy/` address is a concept only; no official hosting or endorsement is claimed. Deploy using your own HTTPS origin and Telegram API application credentials. See [deployment instructions](docs/heroku.md) and [Xydrive cloud sync limitations](docs/xydrive-cloud-sync.md).
+</div>
 
-## Credits and license
+---
 
-Based on the open-source [Telegram Web A project (Ajaxy/telegram-tt)](https://github.com/Ajaxy/telegram-tt). Original contributors retain their attribution. Distributed under GPL-3.0-or-later; preserve upstream notices and comply with the license when distributing builds.
+## Beyond messaging
+
+Web XY brings messaging and personal cloud file management together in one responsive web experience. It explores a productivity-focused approach while retaining the existing Telegram messaging and media foundations.
+
+<!-- Insert actual Web XY desktop screenshot here once available. -->
+
+## Introducing Xydrive
+
+**Your files. Your folders. Your cloud.**
+
+Xydrive is a dedicated, full-page file-management workspace within the authenticated client. Enable **Xydrive Beta** in **Settings → Experimental**, then open **Xydrive** from the main menu.
+
+<!-- Insert actual Xydrive desktop screenshot here. -->
+
+| Capability | What Xydrive offers |
+| :--- | :--- |
+| Cloud workspace | Grid and list views, folder navigation and contextual file actions. |
+| Folder hierarchy | Saved Messages as the root; eligible owned private channels as folder storage. |
+| Native transfers | Multiple-file selection, desktop drag-and-drop, download and transfer progress. Cancellation depends on the native transfer stage. |
+| Media experience | Native previews for supported photos, video and audio; other documents open through Telegram. |
+| Smart organization | Search loaded files, sort, filter, favorite, pin and assign display aliases. |
+| Storage insights | Bounded indexing, known file sizes, file-type distribution and folder totals. |
+| Cloud synchronization | Opt-in experimental synchronization of folder and organization metadata across devices. |
+| Adaptive interface | Responsive workspace layouts and existing theme integration. |
+
+<!-- Add actual folder, transfer and media screenshots here. Use paired mobile screenshots in light and dark themes when available. See assets/readme/SCREENSHOTS.md. -->
+
+## Native by design
+
+<div align="center">
+<img src="assets/readme/architecture.svg" width="100%" alt="Architecture: Web XY messaging and Xydrive share the Telegram API and native transfer engine. Drive root is Saved Messages, folders use private channels and optional sync uses a separate metadata registry.">
+</div>
+
+Xydrive reuses the authenticated Telegram session, native media viewer and transfer engine. Files remain in Telegram; there is no additional file-storage server or file proxy. Folder hierarchy and display aliases are logical metadata rather than changes to original Telegram filenames.
+
+- **Account-owned storage:** Saved Messages and eligible private channels.
+- **Native integration:** Telegram-managed upload limits, media access and transfer restrictions.
+- **Optional metadata sync:** A private broadcast channel stores organization metadata when explicitly enabled.
+- **Bounded indexing:** Storage analytics reflect known indexed file sizes, not a total cloud quota.
+
+## Product philosophy
+
+**Simplicity.** Powerful organization without unnecessary complexity.
+
+**Performance.** Reuse established native client capabilities.
+
+**Integration.** Extend the experience rather than replace Telegram infrastructure.
+
+**Transparency.** Make the storage model, limitations and project status clear.
+
+## Try the prototype
+
+Follow the [deployment guide](docs/heroku.md) to run the client on your own HTTPS origin using your Telegram application credentials. Never share personal session strings, login codes or passwords.
+
+Xydrive is a beta feature. Production and authenticated regression testing remain required. Cloud metadata sync is experimental and has not been validated across real devices; ordinary Telegram cloud chats are not end-to-end encrypted. Review the [cloud sync documentation](docs/xydrive-cloud-sync.md) and [organization limitations](docs/xydrive-organization.md) before using important files.
+
+## The vision
+
+A distinct, productivity-focused web client that complements the Telegram ecosystem.
+
+**Proposed address:** `web.telegram.org/xy/`
+
+This address is a proposal only, subject to Telegram's review and approval. Web XY is not officially affiliated with or endorsed by Telegram.
+
+## License & acknowledgements
+
+Web XY is built on the open-source foundations of [Telegram Web A (Ajaxy/telegram-tt)](https://github.com/Ajaxy/telegram-tt). Thanks to the original authors and contributors.
+
+Licensed under [GPL-3.0-or-later](LICENSE). Preserve upstream attribution and comply with the license when distributing builds.
+
+<div align="center">
+<img src="assets/readme/footer.svg" alt="Web XY — Beyond conversations" width="100%">
+</div>
