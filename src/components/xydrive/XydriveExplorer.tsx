@@ -61,7 +61,6 @@ type OwnProps = {
   sourceId?: string;
   ownerId?: string;
   locationKey: string;
-  view: 'grid' | 'list';
   initialFilter?: XydriveFilter;
   isRecent?: boolean;
   isLibraryScope?: boolean;
@@ -76,7 +75,6 @@ type OwnProps = {
   emptyLabel: RegularLangKey;
   previewingId?: string;
   mutation?: XydriveMutation;
-  onChangeView: (view: 'grid' | 'list') => void;
   onPreferences: (filter: XydriveFilter, sort: XydriveSort, direction: XydriveDirection) => void;
   onLoadMore: NoneToVoidFunction;
   onSync: NoneToVoidFunction;
@@ -93,10 +91,10 @@ type OwnProps = {
 };
 
 const XydriveExplorer = ({
-  files, indexedFiles, index, childrenFolders, folders, organization, sourceId, ownerId, locationKey, view,
+  files, indexedFiles, index, childrenFolders, folders, organization, sourceId, ownerId, locationKey,
   initialFilter, isRecent, isLibraryScope, isComplete, isIndexComplete, isLoading,
   isSyncing, isNarrow, isNativeViewerOpen,
-  hasMore, loadError, emptyLabel, previewingId, mutation, onChangeView, onPreferences, onLoadMore, onSync,
+  hasMore, loadError, emptyLabel, previewingId, mutation, onPreferences, onLoadMore, onSync,
   onUpload, onCreate, onOpenFolder, onManageFolder, onOpenMessage, onForward, onPreview, onLabel, onBulkLabel, onMutate,
 }: OwnProps) => {
   const { showNotification } = getActions();
@@ -154,7 +152,15 @@ const XydriveExplorer = ({
   const canChangeSelected = selected.length > 0 && selected.length <= MAX_XYDRIVE_MOVE_OR_DELETE
     && selected.every(canManageFile);
   const currentInspected = inspected && items.find(({ id }) => id === inspected.id);
-  const described = currentInspected ? [currentInspected] : selected;
+  const described = inspected ? (currentInspected ? [currentInspected] : []) : selected;
+  const isInspectorVisible = hasInspector && described.length > 0;
+
+  useEffect(() => {
+    if (hasInspector && !described.length) {
+      setHasInspector(false);
+      setInspected(undefined);
+    }
+  }, [hasInspector, described.length]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(query), SEARCH_DELAY);
@@ -179,7 +185,7 @@ const XydriveExplorer = ({
 
   const handleEscape = useLastCallback(() => {
     if (isNativeViewerOpen || getOpenModalCount() || menuItem || operation) return false;
-    if (hasInspector) {
+    if (isInspectorVisible) {
       setHasInspector(false);
       return true;
     }
@@ -468,26 +474,6 @@ const XydriveExplorer = ({
                 {lang('XydriveDescendingShort')}
               </MenuItem>
             </DropdownMenu>
-            <button
-              type="button"
-              className={styles.control}
-              aria-label={lang(view === 'grid' ? 'XydriveList' : 'XydriveGrid')}
-              onClick={() => onChangeView(view === 'grid' ? 'list' : 'grid')}
-            >
-              <Icon name={view === 'grid' ? 'list' : 'media'} />
-            </button>
-            <button
-              type="button"
-              className={buildClassName(styles.control, hasInspector && styles.active)}
-              aria-label={lang('XydriveDetails')}
-              aria-pressed={hasInspector}
-              onClick={() => {
-                setInspected(undefined);
-                setHasInspector(!hasInspector);
-              }}
-            >
-              <Icon name="sidebar" />
-            </button>
           </div>
         </div>
         {selected.length > 0 && (
@@ -514,6 +500,14 @@ const XydriveExplorer = ({
               )}
             >
               <MenuItem icon="info" onClick={() => inspect()}>{lang('XydriveDetails')}</MenuItem>
+              <MenuItem icon="check" onClick={() => {
+                const ids = new Set(visibleSelection.ids);
+                visible.forEach(({ id }) => ids.add(id));
+                setSelection({ ids, anchor: visible[0]?.id });
+              }}
+              >
+                {lang('XydriveSelectVisible')}
+              </MenuItem>
               <MenuItem icon="copy" onClick={() => copyNames(selected)}>{lang('XydriveCopyNames')}</MenuItem>
               <MenuItem
                 icon="download"
@@ -581,7 +575,7 @@ const XydriveExplorer = ({
           </button>
         </div>
       )}
-      <div className={buildClassName(styles.body, hasInspector && !isNarrow && styles.hasInspector)}>
+      <div className={buildClassName(styles.body, isInspectorVisible && !isNarrow && styles.hasInspector)}>
         <div
           ref={scrollRef}
           className={styles.collection}
@@ -602,9 +596,6 @@ const XydriveExplorer = ({
             <XydriveCollection
               items={visible}
               selected={visibleSelection.ids}
-              view={view}
-              sort={sort}
-              direction={direction}
               query={search}
               previewingId={previewingId}
               observe={observe}
@@ -620,21 +611,11 @@ const XydriveExplorer = ({
                 setInspected(undefined);
                 setSelection((current) => selectXydriveFile(current, matchIds, item.id, mode));
               }}
-              onTogglePage={() => {
-                const all = visible.every(({ id }) => visibleSelection.ids.has(id));
-                const ids = new Set(visibleSelection.ids);
-                visible.forEach(({ id }) => {
-                  if (all) ids.delete(id);
-                  else ids.add(id);
-                });
-                setSelection({ ids, anchor: visible[0]?.id });
-              }}
-              onSort={(next) => setOrdering(next, sort === next && direction === 'asc' ? 'desc' : 'asc')}
               onMenu={openActions}
             />
           ) : isLoading ? (
             <div
-              className={buildClassName(styles.skeletonGrid, view === 'list' && styles.skeletonList)}
+              className={styles.skeletonGrid}
               role="status"
               aria-label={lang('XydriveLoadingOlder')}
             >
@@ -697,7 +678,7 @@ const XydriveExplorer = ({
             </button>
           )}
         </div>
-        {hasInspector && (
+        {isInspectorVisible && (
           <XydriveInspector
             items={described}
             isSheet={isNarrow}

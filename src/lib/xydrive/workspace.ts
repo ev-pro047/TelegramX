@@ -32,7 +32,8 @@ export function getXydrivePreferences(ownerId?: string): XydriveWorkspacePrefere
   }
 
   return {
-    view: saved.view === 'list' ? 'list' : 'grid',
+    // Ignore the legacy list preference: the workspace now uses cards only.
+    view: 'grid',
     density: saved.density === 'compact' ? 'compact' : 'comfortable',
     isSidebarCollapsed: saved.isSidebarCollapsed === true,
     expanded: Array.isArray(saved.expanded)

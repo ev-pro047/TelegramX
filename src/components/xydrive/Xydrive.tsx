@@ -101,7 +101,7 @@ const Xydrive = ({
   const [section, setSection] = useState<Section>(() => getXydriveLocation(ownerId).section);
   const [categoryScope, setCategoryScope] = useState<XydriveCategory>();
   const [preferences, setPreferences] = useState(() => getXydrivePreferences(ownerId));
-  const { view, density, isSidebarCollapsed } = preferences;
+  const { density, isSidebarCollapsed } = preferences;
   const navigationRef = useRef<HTMLButtonElement>();
   const sidebarRef = useRef<HTMLElement>();
   const [isDrawerLayout, setIsDrawerLayout] = useState(() => window.matchMedia(DRAWER_QUERY).matches);
@@ -554,8 +554,6 @@ const Xydrive = ({
                 isRecent={section === 'recent'}
                 ownerId={ownerId}
                 sourceId={isDrive ? sourceId : undefined}
-                view={view}
-                onChangeView={(next) => setPreferences({ ...preferences, view: next })}
                 isComplete={isDrive ? drive?.status === 'ready' && !hasMore : isIndexComplete}
                 isIndexComplete={isIndexComplete}
                 isLoading={isDrive ? isLoading : Boolean(isSyncing)}

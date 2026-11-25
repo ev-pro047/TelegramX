@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { getOrganization } from './organization';
-import { buildFolderTree, flattenFolderTree, getXydriveLocationState, storeXydriveLocationState } from './workspace';
+import {
+  buildFolderTree, flattenFolderTree, getXydriveLocationState, getXydrivePreferences, storeXydriveLocationState,
+} from './workspace';
 
 describe('Xydrive workspace state', () => {
+  it('defaults to the card-only workspace', () => {
+    expect(getXydrivePreferences().view).toBe('grid');
+  });
+
   it('walks only open tree branches and keeps full logical depth', () => {
     const folders = Array.from({ length: 8 }, (_, i) => ({ id: String(i), title: String(i), accessHash: '1' }));
     const org = getOrganization(undefined, 'owner');

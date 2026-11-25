@@ -2,9 +2,6 @@ import { memo, useEffect, useRef } from '../../lib/teact/teact';
 
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { XydriveItem } from '../../lib/xydrive/collection';
-import type { XydriveDirection, XydriveSort } from '../../lib/xydrive/explorer';
-import type { XydriveView } from '../../lib/xydrive/workspace';
-import type { RegularLangKey } from '../../types/language';
 
 import { CATEGORY_LABELS, getFileExtension, getFileFormat, getFileIcon } from '../../lib/xydrive/collection';
 import buildClassName from '../../util/buildClassName';
@@ -21,16 +18,10 @@ import styles from './XydriveExplorer.module.scss';
 const PRESS_MS = 480;
 const PRESS_TOLERANCE = 10;
 const DRAG_TYPE = 'application/x-telegramx-drive';
-const COLUMNS: [XydriveSort, RegularLangKey][] = [
-  ['name', 'XydriveSortName'], ['type', 'XydriveSortType'], ['date', 'XydriveSortDate'], ['size', 'XydriveSortSize'],
-];
 
 type OwnProps = {
   items: XydriveItem[];
   selected: ReadonlySet<string>;
-  view: XydriveView;
-  sort: XydriveSort | 'opened';
-  direction: XydriveDirection;
   query: string;
   previewingId?: string;
   observe: ObserveFn;
@@ -39,14 +30,12 @@ type OwnProps = {
   onDrop: (item: XydriveItem, folder: XydriveItem) => void;
   onOpen: (item: XydriveItem) => void;
   onSelect: (item: XydriveItem, mode: 'replace' | 'toggle' | 'range') => void;
-  onTogglePage: NoneToVoidFunction;
-  onSort: (sort: XydriveSort) => void;
   onMenu: (item: XydriveItem, anchor: HTMLElement) => void;
 };
 
 const XydriveCollection = ({
-  items, selected, view, sort, direction, query, previewingId, observe,
-  canDrag, canDrop, onDrop, onOpen, onSelect, onTogglePage, onSort, onMenu,
+  items, selected, query, previewingId, observe,
+  canDrag, canDrop, onDrop, onOpen, onSelect, onMenu,
 }: OwnProps) => {
   const lang = useLang();
   const pressRef = useRef<{ id: string; x: number; y: number; timer: number }>();
@@ -86,8 +75,6 @@ const XydriveCollection = ({
     else if (event.shiftKey) onSelect(item, 'range');
     else onSelect(item, event.ctrlKey || event.metaKey || gesture?.isTouch ? 'toggle' : 'replace');
   }
-
-  const allPageSelected = items.length > 0 && items.every(({ id }) => selected.has(id));
 
   function renderItem(item: XydriveItem) {
     const file = item.kind === 'file' ? item.file : undefined;
@@ -197,9 +184,6 @@ const XydriveCollection = ({
             </span>
           </span>
         </button>
-        <span className={styles.type}>{format || type}</span>
-        <span className={styles.date}>{date || '–'}</span>
-        <span className={styles.size}>{size || '–'}</span>
         <span className={styles.flags}>
           {item.isFavorite && <Icon name="star-outline" />}
           {item.isPinned && <Icon name="pin" />}
@@ -231,59 +215,23 @@ const XydriveCollection = ({
     );
   }
 
-  if (view === 'grid') {
-    const folders = items.filter((item) => item.kind === 'folder');
-    const files = items.filter((item) => item.kind === 'file');
-    return (
-      <div className={styles.gridGroups}>
-        {folders.length > 0 && (
-          <section aria-labelledby="xydrive-folder-group">
-            <h2 id="xydrive-folder-group" className={styles.groupTitle}>{lang('XydriveFolders')}</h2>
-            <ul className={buildClassName(styles.collectionItems, styles.folderGrid)}>{folders.map(renderItem)}</ul>
-          </section>
-        )}
-        {files.length > 0 && (
-          <section aria-labelledby="xydrive-file-group">
-            <h2 id="xydrive-file-group" className={styles.groupTitle}>{lang('XydriveFolderFiles')}</h2>
-            <ul className={buildClassName(styles.collectionItems, styles.grid)}>{files.map(renderItem)}</ul>
-          </section>
-        )}
-      </div>
-    );
-  }
-
+  const folders = items.filter((item) => item.kind === 'folder');
+  const files = items.filter((item) => item.kind === 'file');
   return (
-    <>
-      <div className={styles.columnHead}>
-        <button
-          type="button"
-          className={styles.control}
-          role="checkbox"
-          aria-checked={allPageSelected}
-          aria-label={lang('XydriveSelectVisible')}
-          onClick={onTogglePage}
-        >
-          <span className={styles.checkbox}>{allPageSelected && <Icon name="check" />}</span>
-        </button>
-        {COLUMNS.map(([field, label]) => (
-          <button
-            key={field}
-            type="button"
-            className={styles[field]}
-            aria-pressed={sort === field}
-            aria-label={sort === field ? `${lang(label)} · ${lang(direction === 'asc' ? 'XydriveAscending'
-              : 'XydriveDescending')}` : lang(label)}
-            onClick={() => onSort(field)}
-          >
-            {lang(label)}
-            {sort === field && <Icon name={direction === 'asc' ? 'up' : 'down'} />}
-          </button>
-        ))}
-      </div>
-      <ul className={buildClassName(styles.collectionItems, styles.list)}>
-        {items.map(renderItem)}
-      </ul>
-    </>
+    <div className={styles.gridGroups}>
+      {folders.length > 0 && (
+        <section aria-labelledby="xydrive-folder-group">
+          <h2 id="xydrive-folder-group" className={styles.groupTitle}>{lang('XydriveFolders')}</h2>
+          <ul className={buildClassName(styles.collectionItems, styles.folderGrid)}>{folders.map(renderItem)}</ul>
+        </section>
+      )}
+      {files.length > 0 && (
+        <section aria-labelledby="xydrive-file-group">
+          <h2 id="xydrive-file-group" className={styles.groupTitle}>{lang('XydriveFolderFiles')}</h2>
+          <ul className={buildClassName(styles.collectionItems, styles.grid)}>{files.map(renderItem)}</ul>
+        </section>
+      )}
+    </div>
   );
 };
 
