@@ -66,6 +66,7 @@ import type { XydriveFile } from '../../../lib/xydrive/types';
 import { getXydriveFile } from '../../../lib/xydrive/fileMetadata';
 import { isXydriveChannelEligible } from '../../../lib/xydrive/folders';
 import { getXydriveNextOffset } from '../../../lib/xydrive/pagination';
+import { XYDRIVE_REGISTRY_ABOUT, XYDRIVE_REGISTRY_TITLE } from '../../../lib/xydrive/cloud';
 import { interpolateArray } from '../../../util/waveform';
 import { API_GENERAL_ID_LIMIT, PINNED_MESSAGES_LIMIT } from '../../../limits';
 import {
@@ -275,6 +276,79 @@ function isXydriveChannelUnavailable(err: unknown) {
   ].includes(err.errorMessage);
 }
 
+async function verifyPrivateRegistry(ownerId: string, channel: ApiChat) {
+  if (!isXydriveCurrentAccount(ownerId) || channel.title !== XYDRIVE_REGISTRY_TITLE) return undefined;
+  const verified = await fetchVerifiedXydriveChannel(channel);
+  if (!verified || verified.title !== XYDRIVE_REGISTRY_TITLE || !isXydriveCurrentAccount(ownerId)) return undefined;
+  const result = await invokeRequest(new GramJs.channels.GetFullChannel({
+    channel: buildInputChannel(verified.id, verified.accessHash),
+  }), { shouldThrow: true });
+  if (!result || !(result.fullChat instanceof GramJs.ChannelFull)
+    || result.fullChat.about !== XYDRIVE_REGISTRY_ABOUT || result.fullChat.participantsCount !== 1
+    || result.fullChat.linkedChatId || !isXydriveCurrentAccount(ownerId)) return undefined;
+  return verified;
+}
+
+export async function readXydriveRegistry({ ownerId, channel }: { ownerId: string; channel: ApiChat }) {
+  if (xydriveRetryAt > getServerTime()) return undefined;
+  try {
+    const verified = await verifyPrivateRegistry(ownerId, channel);
+    if (!verified) return undefined;
+    const records: { id: number; text: string }[] = [];
+    let offsetId = 0;
+    let bytes = 0;
+    for (let page = 0; page < 200; page++) {
+      if (!isXydriveCurrentAccount(ownerId)) return undefined;
+      const result = await invokeRequest(new GramJs.messages.GetHistory({
+        peer: buildInputPeer(verified.id, verified.accessHash),
+        offsetId, offsetDate: 0, addOffset: 0, limit: 100, maxId: 0, minId: 0, hash: DEFAULT_PRIMITIVES.BIGINT,
+      }), { shouldThrow: true });
+      if (!result || result instanceof GramJs.messages.MessagesNotModified) return undefined;
+      if (!result.messages.length) {
+        return isXydriveCurrentAccount(ownerId) ? records : undefined;
+      }
+      for (const message of result.messages) {
+        if (!(message instanceof GramJs.Message)) continue;
+        bytes += message.message.length;
+        if (bytes > 8_000_000) return undefined;
+        records.push({ id: message.id, text: message.message });
+      }
+      const next = getXydriveNextOffset(result.messages.map(({ id }) => id), offsetId || undefined);
+      if (next === undefined) return undefined;
+      offsetId = next;
+    }
+  } catch (error) {
+    if (error instanceof FloodWaitError || error instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + error.seconds;
+    }
+  }
+  return undefined;
+}
+
+export async function appendXydriveRegistry({
+  ownerId, channel, records,
+}: { ownerId: string; channel: ApiChat; records: string[] }) {
+  if (xydriveRetryAt > getServerTime() || !records.length || records.length > 129
+    || records.some((record) => !record.startsWith('XYDRIVE_REGISTRY_V1 ') || record.length > 4096)) return false;
+  try {
+    for (const message of records) {
+      const verified = await verifyPrivateRegistry(ownerId, channel);
+      if (!verified || !isXydriveCurrentAccount(ownerId)) return false;
+      const result = await invokeRequest(new GramJs.messages.SendMessage({
+        peer: buildInputPeer(verified.id, verified.accessHash),
+        message, randomId: generateRandomBigInt(), noWebpage: true, silent: true,
+      }), { shouldThrow: true });
+      if (!result || !isXydriveCurrentAccount(ownerId)) return false;
+    }
+    return true;
+  } catch (error) {
+    if (error instanceof FloodWaitError || error instanceof FloodTestPhoneWaitError) {
+      xydriveRetryAt = getServerTime() + error.seconds;
+    }
+    return false;
+  }
+}
+
 export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
   const remaining = xydriveRetryAt - getServerTime();
   if (remaining > 0) return { type: 'wait' as const };
@@ -297,7 +371,8 @@ export async function verifyXydriveChannel({ channel }: { channel: ApiChat }) {
 export async function renameXydriveChannel({
   ownerId, channel, title,
 }: { ownerId: string; channel: ApiChat; title: string }) {
-  if (!isXydriveCurrentAccount(ownerId) || !title.trim() || title.length > 128) return undefined;
+  if (!isXydriveCurrentAccount(ownerId) || !title.trim() || title.length > 128
+    || title === XYDRIVE_REGISTRY_TITLE || channel.title === XYDRIVE_REGISTRY_TITLE) return undefined;
   if (xydriveRetryAt > getServerTime()) return { type: 'wait' as const };
   try {
     const verified = await fetchVerifiedXydriveChannel(channel);

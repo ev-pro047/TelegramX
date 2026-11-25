@@ -22,6 +22,7 @@ addActionHandler('openXydrive', (global, actions, payload): ActionReturnType => 
     .some(({ id }) => id === sourceId) ? sourceId : undefined;
   return updateTabState(global, {
     xydriveOwnerId: global.currentUserId,
+    xydriveCloudStatus: 'checking',
     xydriveSourceId: validSourceId,
     xydrive: undefined,
     xydriveMountRequest: undefined,
@@ -40,6 +41,7 @@ addActionHandler('closeXydrive', (global, actions, payload): ActionReturnType =>
   }
   return updateTabState(global, {
     xydriveOwnerId: undefined,
+    xydriveCloudStatus: undefined,
     xydriveRename: undefined,
     xydriveIndex: global.byTabId[tabId]?.xydriveIndex?.ownerId === global.currentUserId
       && !global.passcode.isScreenLocked && selectSharedSettings(global).isXydriveEnabled

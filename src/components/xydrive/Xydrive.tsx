@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from '../../lib/teact/teact';
 
 import type { ApiChat } from '../../api/types';
+import type { CloudSyncStatus } from '../../lib/xydrive/cloud';
 import type {
   XydriveCategory, XydriveFile, XydriveFolderLabel, XydriveIndex, XydriveMount,
   XydriveMutation, XydriveOrganization, XydriveState,
@@ -79,6 +80,8 @@ type OwnProps = {
   onMutate: (fileIds: string[], operation: 'delete' | 'move', destinationId?: string) => void;
   onReparent: (channelId: string, parentId?: string) => void;
   onSync: NoneToVoidFunction;
+  cloudStatus?: CloudSyncStatus;
+  onCloudSync: (shouldCreate?: boolean) => void;
   onCancelSync: NoneToVoidFunction;
   onOpenMessage: (file: XydriveFile) => void;
   onPreview: (file: XydriveFile) => void;
@@ -92,7 +95,7 @@ const Xydrive = ({
   onClose, onOpenSaved, onLoadMore, onOpenMessage, onSelectSource, onMount, onUnmount,
   onPreview, previewingId, mediaError, textPreview, onCloseTextPreview, onCreate, onRefresh, createStatus,
   organization, index, mutation, renameStatus, isNativeViewerOpen, onLabel, onLabelFolder, onBulkLabel,
-  onRenameFolder, onForward, onMutate, onReparent, onSync, onCancelSync,
+  onRenameFolder, onForward, onMutate, onReparent, onSync, onCancelSync, cloudStatus, onCloudSync,
 }: OwnProps) => {
   const lang = useLang();
   const [section, setSection] = useState<Section>(() => getXydriveLocation(ownerId).section);
@@ -486,6 +489,19 @@ const Xydrive = ({
             pickerRef={uploadRef}
             canUpload={isDrive && drive?.error !== 'unavailable'}
           >
+            {cloudStatus && (
+              <p className={styles.notice} role="status">
+                {lang(cloudStatus === 'setup' ? 'XydriveCloudSetup' : cloudStatus === 'synced' ? 'XydriveCloudSynced'
+                  : cloudStatus === 'conflict' ? 'XydriveCloudConflict' : cloudStatus === 'error' ? 'XydriveCloudError'
+                    : 'XydriveCloudChecking')}
+                {' '}
+                {(cloudStatus === 'setup' || cloudStatus === 'error' || cloudStatus === 'conflict') && (
+                  <Button size="tiny" color="translucent" noFastClick onClick={() => onCloudSync(cloudStatus === 'setup')}>
+                    {lang(cloudStatus === 'setup' ? 'XydriveCloudEnable' : 'XydriveRetry')}
+                  </Button>
+                )}
+              </p>
+            )}
             {mediaError && (
               <p className={styles.notice} role="alert">
                 {lang(mediaError === 'wait' ? 'XydriveWait' : 'XydriveMediaUnavailable')}

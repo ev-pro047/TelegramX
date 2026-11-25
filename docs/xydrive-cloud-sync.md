@@ -1,0 +1,9 @@
+# Xydrive cloud metadata (experimental)
+
+An opt-in private broadcast channel stores append-only metadata transactions. The registry is not a file folder. Native Telegram files remain in their original locations. The channel must be owned by the logged-in user, private, have exactly one participant and the expected description. No credentials or sessions are stored. Ordinary Telegram cloud chats are not end-to-end encrypted.
+
+Opening Xydrive checks for a registry. Only explicit Enable cloud sync creates one after a complete bounded dialog scan. The registry is visible in Telegram; do not share, rename, edit, or delete it. On a clean login the journal restores folder registrations, hierarchy, favorites, pins, aliases and last opened metadata. Device presentation preferences remain local. Transactions are committed only after all parts are present. Disjoint changes can merge; conflicting edits fail closed. No old metadata or channel is deleted. Incomplete transactions are ignored. Cloud reads and transaction size are bounded, so large journals may need a future compaction and recovery UI.
+
+**Before release:** run typecheck, tests, production build and actual two-device migration, logout, registry creation, network interruption, concurrency, flood-wait, channel ownership/member count, lock/account-switch and large-library tests. The feature is not production-validated. Changes made immediately before closing or logging out may not have synchronized; confirm the sync state first. This phase does not implement periodic compacted snapshots or a conflict-resolution UI.
+
+The local checkpoint includes the last committed journal message and its reconstructed metadata; a missing or altered checkpoint blocks synchronization. Polling is limited to an initialized registry; incomplete discovery never auto-creates a channel. A failed or ambiguous creation attempt is not repeated within the running client.

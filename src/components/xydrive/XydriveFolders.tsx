@@ -5,6 +5,7 @@ import type { ApiChat } from '../../api/types';
 import type { XydriveFolderLabel, XydriveMount, XydriveOrganization } from '../../lib/xydrive/types';
 
 import { isXydriveChannelEligible } from '../../lib/xydrive/folders';
+import { XYDRIVE_REGISTRY_TITLE } from '../../lib/xydrive/cloud';
 import { getFolderChain } from '../../lib/xydrive/organization';
 import { buildFolderTree, flattenFolderTree } from '../../lib/xydrive/workspace';
 
@@ -75,7 +76,7 @@ const XydriveFolders = ({
     if (dialog !== 'mount' || !chats) return [];
     const mounted = new Set(folders.map(({ id }) => id));
     const query = value.trim().toLocaleLowerCase();
-    return Object.values(chats).filter((chat) => isXydriveChannelEligible(chat) && !mounted.has(chat.id)
+    return Object.values(chats).filter((chat) => isXydriveChannelEligible(chat) && chat.title !== XYDRIVE_REGISTRY_TITLE && !mounted.has(chat.id)
       && chat.title.toLocaleLowerCase().includes(query)).sort((a, b) => a.title.localeCompare(b.title));
   }, [dialog, chats, folders, value]);
 
