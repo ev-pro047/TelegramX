@@ -13,6 +13,7 @@ import {
 } from '../../lib/xydrive/transfers';
 import { formatTimeDuration } from '../../util/dates/duration';
 import { formatFileSize } from '../../util/text/textFormat';
+import buildClassName from '../../util/buildClassName';
 
 import useLang from '../../hooks/useLang';
 
@@ -181,11 +182,12 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
           isOpen
           hasCloseButton
           title={lang('XydriveTransfers')}
-          dialogClassName={workspaceStyles.sheetFrame}
+          isCondensedHeader
+          dialogClassName={buildClassName(workspaceStyles.sheetFrame, styles.transferSheet)}
           onClose={() => setIsOpen(false)}
         >
           <div className={styles.transferContent}>
-            <div className={styles.toolbar}>
+            <div className={styles.filters}>
               {FILTERS.map(([id, label]) => (
                 <button
                   key={id}
@@ -199,7 +201,7 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
               ))}
             </div>
             {canShowTotals && (
-              <label className={styles.meta}>
+              <label className={styles.queueProgress}>
                 {lang('XydriveQueueProgress')}
                 {' '}
                 ·
@@ -222,7 +224,7 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
                       <Icon name={getFileIcon(classifyXydriveFile(row.name))} />
                     </span>
                     <div className={styles.info}>
-                      <strong className={styles.name} dir="auto">{row.name}</strong>
+                      <strong className={styles.name} dir="auto" title={row.name}>{row.name}</strong>
                       <span className={styles.meta}>
                         <Icon name={isUpload ? 'arrow-up-circle-filled' : 'download'} ariaLabel={direction} />
                         {lang(STATUS[row.status])}
@@ -230,7 +232,7 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
                         {percent && ` · ${percent}`}
                         {row.size !== undefined && ` · ${formatFileSize(lang, row.size)}`}
                       </span>
-                      <span className={styles.meta} dir="auto">{row.destinationName || lang('XydriveRoot')}</span>
+                      <span className={styles.destination} dir="auto">{row.destinationName || lang('XydriveRoot')}</span>
                       {isActiveTransfer(row.status) && (
                         <progress
                           className={styles.progress}
@@ -248,36 +250,52 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
                         </span>
                       ) : undefined}
                     </div>
-                    {(row.status === 'queued' || row.status === 'active') && (
-                      <Button size="tiny" color="translucent" noFastClick onClick={() => cancelXydriveTransfer(row.id)}>
-                        {lang('XydriveTransferCancel')}
-                      </Button>
-                    )}
-                    {row.canRetry && (
-                      <Button size="tiny" color="translucent" noFastClick onClick={() => retryXydriveTransfer(row.id)}>
-                        {lang('XydriveTransferRetry')}
-                      </Button>
-                    )}
-                    {!isActiveTransfer(row.status) && (
-                      <button
-                        type="button"
-                        className={styles.filter}
-                        aria-label={lang('XydriveDismissTransfer', { name: row.name })}
-                        onClick={() => dismissXydriveTransfer(row.id, ownerId)}
-                      >
-                        <Icon name="close" />
-                      </button>
-                    )}
+                    <div className={styles.rowActions}>
+                      {(row.status === 'queued' || row.status === 'active') && (
+                        <Button
+                          size="tiny"
+                          color="translucent"
+                          noFastClick
+                          noForcedUpperCase
+                          onClick={() => cancelXydriveTransfer(row.id)}
+                        >
+                          {lang('XydriveTransferCancel')}
+                        </Button>
+                      )}
+                      {row.canRetry && (
+                        <Button
+                          size="tiny"
+                          color="translucent"
+                          noFastClick
+                          noForcedUpperCase
+                          onClick={() => retryXydriveTransfer(row.id)}
+                        >
+                          {lang('XydriveTransferRetry')}
+                        </Button>
+                      )}
+                      {!isActiveTransfer(row.status) && (
+                        <button
+                          type="button"
+                          className={styles.dismiss}
+                          aria-label={lang('XydriveDismissTransfer', { name: row.name })}
+                          title={lang('XydriveDismissTransfer', { name: row.name })}
+                          onClick={() => dismissXydriveTransfer(row.id, ownerId)}
+                        >
+                          <Icon name="close" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
-            <div className={styles.toolbar}>
+            <div className={styles.footer}>
               {active.length > 0 && (
                 <Button
                   size="tiny"
                   color="translucent"
                   noFastClick
+                  noForcedUpperCase
                   onClick={() => cancelAllXydriveTransfers(ownerId)}
                 >
                   {lang('XydriveTransferCancelAll')}
@@ -287,6 +305,7 @@ const XydriveTransfers = ({ ownerId, sourceId, destinationName, files, pickerRef
                 size="tiny"
                 color="translucent"
                 noFastClick
+                noForcedUpperCase
                 onClick={() => clearXydriveTransferHistory(ownerId)}
               >
                 {lang('XydriveTransferClear')}

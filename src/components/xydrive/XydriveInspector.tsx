@@ -100,11 +100,11 @@ const XydriveInspector = ({
           )}
           <div className={styles.inspectorActions}>
             {file && !file.previewKind ? (
-              <Button size="smaller" noFastClick onClick={() => onNativeMessage(file)}>
+              <Button size="smaller" className={styles.inspectorPrimary} noForcedUpperCase noFastClick onClick={() => onNativeMessage(file)}>
                 {lang('XydriveOpenMessage')}
               </Button>
             ) : (
-              <Button size="smaller" noFastClick onClick={() => onOpen(item)}>
+              <Button size="smaller" className={styles.inspectorPrimary} noForcedUpperCase noFastClick onClick={() => onOpen(item)}>
                 {lang(file ? 'XydrivePreview' : 'Open')}
               </Button>
             )}

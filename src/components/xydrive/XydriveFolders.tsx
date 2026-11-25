@@ -9,6 +9,8 @@ import { XYDRIVE_REGISTRY_TITLE } from '../../lib/xydrive/cloud';
 import { getFolderChain } from '../../lib/xydrive/organization';
 import { buildFolderTree, flattenFolderTree } from '../../lib/xydrive/workspace';
 
+import buildClassName from '../../util/buildClassName';
+
 import useLang from '../../hooks/useLang';
 
 import Avatar from '../common/Avatar';
@@ -128,32 +130,68 @@ const XydriveFolders = ({
         isSlim
         hasCloseButton
         title={folder.title}
-        dialogClassName={styles.sheetFrame}
+        isCondensedHeader
+        dialogClassName={buildClassName(styles.sheetFrame, styles.folderManageSheet)}
         onClose={onClose}
       >
-        <div className={styles.dialog}>
+        <div className={styles.folderManage}>
           <p className={styles.description}>
             {lang(folder.isManaged ? 'XydriveManagedPolicy' : 'XydriveMountedPolicy')}
           </p>
-          <Button color="translucent" noFastClick onClick={() => onOpenFolder(folder.id)}>{lang('Open')}</Button>
-          <Button
-            color="translucent"
-            noFastClick
-            onClick={() => onLabelFolder(folder.id, { favorite: !label?.favorite })}
-          >
-            {lang(label?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}
-          </Button>
-          <Button color="translucent" noFastClick onClick={() => onLabelFolder(folder.id, { pinned: !label?.pinned })}>
-            {lang(label?.pinned ? 'XydriveUnpin' : 'XydrivePin')}
-          </Button>
-          {folder.isManaged && (
-            <Button color="translucent" noFastClick onClick={() => onChangeDialog('rename')}>
-              {lang('XydriveRenameFolder')}
+          <div className={styles.folderActionGrid}>
+            <Button
+              size="smaller"
+              color="translucent"
+              iconName="folder"
+              noForcedUpperCase
+              noFastClick
+              onClick={() => onOpenFolder(folder.id)}
+            >
+              <span>{lang('Open')}</span>
             </Button>
-          )}
-          <Button color="translucent" noFastClick onClick={() => onChangeDialog('move')}>
-            {lang('XydriveMoveFolder')}
-          </Button>
+            <Button
+              size="smaller"
+              color="translucent"
+              iconName="star-outline"
+              noForcedUpperCase
+              noFastClick
+              onClick={() => onLabelFolder(folder.id, { favorite: !label?.favorite })}
+            >
+              <span>{lang(label?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}</span>
+            </Button>
+            <Button
+              size="smaller"
+              color="translucent"
+              iconName="pin"
+              noForcedUpperCase
+              noFastClick
+              onClick={() => onLabelFolder(folder.id, { pinned: !label?.pinned })}
+            >
+              <span>{lang(label?.pinned ? 'XydriveUnpin' : 'XydrivePin')}</span>
+            </Button>
+            {folder.isManaged && (
+              <Button
+                size="smaller"
+                color="translucent"
+                iconName="edit"
+                noForcedUpperCase
+                noFastClick
+                onClick={() => onChangeDialog('rename')}
+              >
+                <span>{lang('XydriveRenameFolder')}</span>
+              </Button>
+            )}
+            <Button
+              size="smaller"
+              color="translucent"
+              iconName="arrow-right"
+              noForcedUpperCase
+              noFastClick
+              onClick={() => onChangeDialog('move')}
+            >
+              <span>{lang('XydriveMoveFolder')}</span>
+            </Button>
+          </div>
           <fieldset className={styles.folderColors}>
             <legend>{lang('XydriveFolderColor')}</legend>
             {FOLDER_TONES.map(([tone, key]) => (
@@ -169,7 +207,15 @@ const XydriveFolders = ({
               </button>
             ))}
           </fieldset>
-          <Button color="danger" onClick={() => onChangeDialog('unmount')}>{lang('XydriveUnmount')}</Button>
+          <Button
+            className={styles.unmountAction}
+            size="smaller"
+            color="danger"
+            noForcedUpperCase
+            onClick={() => onChangeDialog('unmount')}
+          >
+            {lang('XydriveUnmount')}
+          </Button>
         </div>
       </Modal>
     );
