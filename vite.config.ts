@@ -14,7 +14,7 @@ import { createWidgetSandbox } from './src/lib/widget-sandbox/vite.ts';
 import packageJson from './package.json' with { type: 'json' };
 
 const DIR_NAME = dirname(fileURLToPath(import.meta.url));
-const PRODUCTION_URL = 'https://web.telegram.org/a';
+const DEFAULT_LOCAL_URL = 'http://localhost:1234/';
 
 const { version: APP_VERSION } = packageJson;
 const BUNDLE_STATS_OUT_DIR = 'bundle-stats';
@@ -79,13 +79,13 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     HTTPS_KEY_PATH: httpsKeyPath = '',
   } = env;
   const appEnv = env.APP_ENV || (mode === 'development' ? 'development' : 'production');
-  const defaultAppTitle = `Telegram${appEnv !== 'production' ? ' Beta' : ''}`;
-  const baseUrl = env.BASE_URL || PRODUCTION_URL;
+  const defaultAppTitle = `Web XY${appEnv !== 'production' ? ' Beta' : ''}`;
+  const baseUrl = env.BASE_URL || DEFAULT_LOCAL_URL;
   const appTitle = env.APP_TITLE || defaultAppTitle;
   const isProductionApp = appEnv === 'production';
   const appleIcon = isProductionApp ? 'apple-touch-icon' : 'apple-touch-icon-dev';
   const publicUrl = new URL(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
-  const socialImageUrl = new URL(isProductionApp ? 'icon-512x512.png' : 'icon-dev-512x512.png', publicUrl).href;
+  const socialImageUrl = new URL('favicon.svg', publicUrl).href;
   const widgetSandbox = await createWidgetSandbox();
   const csp = buildCsp(appEnv);
   const responseHeaders = {
@@ -185,7 +185,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
 
   setViteEnv({
     TG_APP_ENV: appEnv,
-    TG_APP_NAME: env.APP_NAME || '',
+    TG_APP_NAME: env.APP_NAME || 'Web XY',
     TG_APP_TITLE: appTitle,
     TG_PUBLIC_URL: baseUrl,
     TG_CSP: csp,

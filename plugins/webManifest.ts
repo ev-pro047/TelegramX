@@ -46,15 +46,15 @@ export default function buildWebManifestPlugin({ id, isProductionApp }: Options)
 }
 
 function buildManifest(id: string | undefined, isProductionApp: boolean, icons: object[]) {
-  const name = isProductionApp ? 'Telegram Web' : 'Telegram Web Beta';
+  const name = isProductionApp ? 'Web XY' : 'Web XY Beta';
 
   return JSON.stringify({
     id,
     name,
     short_name: name,
-    description: 'Telegram is a cloud-based mobile and desktop messaging app with a focus on security and speed.',
+    description: 'Web XY is an unofficial experimental Telegram client with Xydrive, a dedicated file-management workspace.',
     start_url: './',
-    icons,
+    icons: [{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }, ...icons],
     share_target: {
       action: './share/',
       method: 'POST',

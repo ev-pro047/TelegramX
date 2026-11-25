@@ -21,8 +21,8 @@ const build = spawnSync('npm', ['run', 'build:production'], {
   env: {
     ...process.env,
     BASE_URL: url.href,
-    APP_NAME: process.env.APP_NAME || 'TelegramX',
-    APP_TITLE: process.env.APP_TITLE || 'TelegramX',
+    APP_NAME: process.env.APP_NAME || 'Web XY',
+    APP_TITLE: process.env.APP_TITLE || 'Web XY',
   },
 });
 process.exit(build.status ?? 1);

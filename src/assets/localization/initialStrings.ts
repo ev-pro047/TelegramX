@@ -8,7 +8,7 @@ export default {
   "TestServer": "Test server",
   "PageTitleInactive": "[Inactive]",
   "AuthTitle": "Telegram",
-  "TelegramXClientIdentity": "TelegramX is an unofficial Telegram client.",
+  "TelegramXClientIdentity": "Web XY is an unofficial Telegram client, not affiliated with or endorsed by Telegram.",
   "Connecting": "Connecting...",
   "Close": "Close",
   "AuthKeepSignedIn": "Keep me signed in",

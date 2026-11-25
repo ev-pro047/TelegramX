@@ -257,7 +257,7 @@ const AuthPhoneNumber = ({
       )}
       <div className="auth-form">
         <div id="logo" />
-        <h1>TelegramX</h1>
+        <h1>Web XY</h1>
         <p className="auth-client-note">{lang('TelegramXClientIdentity')}</p>
         <p className="note">{lang('StartText')}</p>
         <form className="form" action="" onSubmit={handleSubmit}>

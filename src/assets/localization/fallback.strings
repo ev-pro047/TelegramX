@@ -4996,7 +4996,7 @@
 "SettingsGroupStorageOrganization" = "Organization and storage";
 "SettingsGroupAppearance" = "Appearance";
 "SettingsProfileTabs" = "Profile content";
-"TelegramXClientIdentity" = "TelegramX is an unofficial Telegram client.";
+"TelegramXClientIdentity" = "Web XY is an unofficial Telegram client, not affiliated with or endorsed by Telegram.";
 
 "XydriveCloudSetup" = "Enable cloud recovery? Creates a private registry channel for your folder structure and labels. Do not share it.";
 "XydriveCloudEnable" = "Enable cloud sync";
