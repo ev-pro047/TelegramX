@@ -8,4 +8,4 @@
 - [Xydrive audit](xydrive-ui-audit.md)
 - [Native client audit](telegramx-ui-audit.md)
 
-The implementation-phase reports and upstream desktop notes are retained for historical context and cross-references. Web XY's current distribution target is the web browser; desktop runtime adapters are retained pending compatibility verification.
+The implementation-phase reports are retained for historical context and cross-references. Upstream desktop instructions are available in Git history. Web XY's current distribution target is the web browser; native desktop packaging is removed, while desktop runtime adapters and their packages are retained until browser compatibility can be tested.
