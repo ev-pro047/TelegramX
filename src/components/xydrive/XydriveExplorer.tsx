@@ -692,6 +692,12 @@ const XydriveExplorer = ({
               </div>
             </div>
           )}
+          {visible.length > 0 && !visible.some((item) => item.kind === 'file') && !hasFilter
+            && !loadError && !isLibraryScope && onCreate && (
+              <p className={styles.scope} role="status">
+                {lang(isLoading ? 'XydriveLoadingOlder' : hasMore ? 'XydriveNoFilesYet' : emptyLabel)}
+              </p>
+            )}
           {hasMore && !loadError && (
             <button type="button" className={styles.loadMore} disabled={isLoading} onClick={onLoadMore}>
               {lang(isLoading ? 'XydriveLoadingOlder' : 'XydriveLoadOlder')}

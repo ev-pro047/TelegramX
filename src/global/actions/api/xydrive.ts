@@ -155,29 +155,50 @@ addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<vo
   const folder = getXydriveMounts(global.settings.byKey.xydriveMounts, ownerId).find(({ id }) => id === sourceId);
   if (sourceId !== ownerId && !folder) return;
 
-  if (tab.xydrive?.status === 'loading') return;
-  const previous = shouldRefresh ? undefined : tab.xydrive;
-  if (previous?.status === 'ready' && previous.nextOffsetId === undefined) return;
+  const previous = tab.xydrive?.ownerId === ownerId && tab.xydrive.sourceId === sourceId
+    ? tab.xydrive : undefined;
+  if (previous?.status === 'loading') return;
+  if (!shouldRefresh && previous?.status === 'ready' && previous.nextOffsetId === undefined) return;
 
   const requestId = ++nextRequestId;
-  const offsetId = previous?.nextOffsetId;
+  const offsetId = shouldRefresh ? undefined : previous?.nextOffsetId;
   setGlobal(updateTabState(global, {
     xydrive: {
       ownerId,
       sourceId,
       files: previous?.files || [],
       scannedCount: previous?.scannedCount || 0,
-      nextOffsetId: offsetId,
+      nextOffsetId: previous?.nextOffsetId,
       status: 'loading',
       requestId,
     },
   }, tabId));
 
+  // Skip a bounded number of pages containing only text or unsupported media.
+  // A first page with no files does not establish that Saved Messages is empty.
   let result;
-  try {
-    result = await callApi('fetchXydriveHistory', { offsetId, channel: folder && buildXydriveChannel(folder) });
-  } catch {
-    result = undefined;
+  let cursor = offsetId;
+  let scannedCount = 0;
+  let files: XydriveFile[] = [];
+  for (let page = 0; page < 4; page++) {
+    try {
+      result = await callApi('fetchXydriveHistory', { offsetId: cursor, channel: folder && buildXydriveChannel(folder) });
+    } catch {
+      result = undefined;
+    }
+    const latest = getGlobal();
+    if (!isXydriveOpen(latest, tabId, ownerId)
+      || latest.byTabId[tabId].xydrive?.requestId !== requestId
+      || (latest.byTabId[tabId].xydriveSourceId || ownerId) !== sourceId) return;
+    if (result?.type !== 'page') break;
+    scannedCount += result.scannedCount;
+    files = result.messages.map((message) => getXydriveMediaFile(message, sourceId)).filter(Boolean);
+    if (files.length || result.nextOffsetId === undefined) break;
+    if (result.nextOffsetId === cursor) {
+      result = undefined;
+      break;
+    }
+    cursor = result.nextOffsetId;
   }
 
   global = getGlobal();
@@ -212,13 +233,12 @@ addActionHandler('loadXydrivePage', async (global, actions, payload): Promise<vo
       global = replaceSettings(global, { xydriveMounts: { ownerId, folders: updatedFolders } });
     }
   }
-  const files = result.messages.map((message) => getXydriveMediaFile(message, sourceId)).filter(Boolean);
   setGlobal(updateTabState(global, {
     xydrive: {
       ownerId,
       sourceId,
-      files: mergeXydriveFiles(current.files, files),
-      scannedCount: current.scannedCount + result.scannedCount,
+      files: mergeXydriveFiles(shouldRefresh ? [] : current.files, files),
+      scannedCount: (shouldRefresh ? 0 : current.scannedCount) + scannedCount,
       nextOffsetId: result.nextOffsetId,
       status: 'ready',
     },

@@ -24,9 +24,6 @@ import useLang from '../../hooks/useLang';
 import Icon from '../common/icons/Icon';
 import AudioPlayer from '../middle/panes/AudioPlayer';
 import Button from '../ui/Button';
-import Menu from '../ui/Menu';
-import MenuItem from '../ui/MenuItem';
-import MenuSeparator from '../ui/MenuSeparator';
 import Modal from '../ui/Modal';
 import XydriveExplorer from './XydriveExplorer';
 import XydriveFolders from './XydriveFolders';
@@ -109,7 +106,6 @@ const Xydrive = ({
   const [dialogFolderId, setDialogFolderId] = useState<string>();
   const [dialogDestinationId, setDialogDestinationId] = useState<string>();
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [dialog, setDialog] = useState<FolderDialog>();
   const uploadRef = useRef<HTMLInputElement>();
@@ -153,10 +149,6 @@ const Xydrive = ({
       return label?.lastOpened;
     });
   }, [indexedFiles, org, section]);
-
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [section, sourceId]);
 
   useEffect(() => {
     storeXydrivePreferences(ownerId, preferences);
@@ -244,6 +236,31 @@ const Xydrive = ({
           onOpen={(id) => openSection('drive', id)}
           onManage={(item) => openFolderDialog('manage', item.id)}
         />
+        <div className={styles.driveUtilities}>
+          <button type="button" className={styles.navItem} onClick={() => openFolderDialog('mount')}>
+            <Icon name="folder" />
+            <span>{lang('XydriveMountFolder')}</span>
+          </button>
+          <button type="button" className={styles.navItem} onClick={() => {
+            setPreferences((current) => ({ ...current, density: density === 'compact' ? 'comfortable' : 'compact' }));
+          }}
+          >
+            <Icon name="list" />
+            <span>{lang(density === 'compact' ? 'XydriveComfortable' : 'XydriveCompact')}</span>
+          </button>
+          <button type="button" className={styles.navItem} onClick={onOpenSaved}>
+            <Icon name="arrow-right" />
+            <span>{lang('XydriveOpenSaved')}</span>
+          </button>
+          <button type="button" className={styles.navItem} onClick={() => {
+            setIsNavigationOpen(false);
+            setIsShortcutsOpen(true);
+          }}
+          >
+            <Icon name="keyboard" />
+            <span>{lang('XydriveShortcuts')}</span>
+          </button>
+        </div>
         <button type="button" className={styles.indexStatus} onClick={() => openSection('overview')}>
           <Icon name="info" />
           <span>
@@ -255,7 +272,6 @@ const Xydrive = ({
     );
   }
 
-  const folderLabel = folder && org.folderLabels?.[folder.id];
   const title = isDrive ? folder?.title || lang('XydriveMyDrive')
     : lang(SECTIONS.find(({ id }) => id === section)!.label);
   const indexStatus = isSyncing ? 'XydriveIndexSyncing'
@@ -400,77 +416,27 @@ const Xydrive = ({
                   >
                     <span className={styles.actionLabel}>{lang('XydriveUpload')}</span>
                   </Button>
-                  <div className={styles.menuAnchor}>
+                  <button
+                    type="button"
+                    className={styles.more}
+                    aria-label={lang('XydriveRefresh')}
+                    title={lang('XydriveRefresh')}
+                    disabled={isLoading}
+                    onClick={onRefresh}
+                  >
+                    <Icon name="reload-arrows" />
+                  </button>
+                  {folder && (
                     <button
-                      className={styles.more}
                       type="button"
-                      aria-haspopup="menu"
-                      aria-expanded={isMenuOpen}
+                      className={styles.more}
                       aria-label={lang('XydriveFolderActions')}
                       title={lang('XydriveFolderActions')}
-                      onClick={() => setIsMenuOpen(!isMenuOpen)}
+                      onClick={() => openFolderDialog('manage', folder.id)}
                     >
-                      <Icon name="more" />
+                      <Icon name="settings" />
                     </button>
-                    <Menu
-                      isOpen={isMenuOpen}
-                      autoClose
-                      positionX={lang.isRtl ? 'left' : 'right'}
-                      positionY="bottom"
-                      ariaLabel={lang('XydriveFolderActions')}
-                      onClose={() => setIsMenuOpen(false)}
-                    >
-                      <MenuItem
-                        className={styles.menuCreate}
-                        icon="add"
-                        disabled={createStatus === 'creating'}
-                        onClick={() => openFolderDialog('create')}
-                      >
-                        {lang('XydriveNewFolder')}
-                      </MenuItem>
-                      <MenuItem icon="reload-arrows" disabled={isLoading} onClick={onRefresh}>
-                        {lang('XydriveRefresh')}
-                      </MenuItem>
-                      <MenuItem
-                        icon="list"
-                        onClick={() => setPreferences({
-                          ...preferences, density: density === 'compact' ? 'comfortable' : 'compact',
-                        })}
-                      >
-                        {lang(density === 'compact' ? 'XydriveComfortable' : 'XydriveCompact')}
-                      </MenuItem>
-                      <MenuItem icon="folder" onClick={() => openFolderDialog('mount')}>
-                        {lang('XydriveMountFolder')}
-                      </MenuItem>
-                      <MenuSeparator />
-                      {folder ? (
-                        <>
-                          <MenuItem
-                            icon="star-outline"
-                            onClick={() => onLabelFolder(folder.id, { favorite: !folderLabel?.favorite })}
-                          >
-                            {lang(folderLabel?.favorite ? 'XydriveUnfavorite' : 'XydriveFavorite')}
-                          </MenuItem>
-                          <MenuItem
-                            icon="pin"
-                            onClick={() => onLabelFolder(folder.id, { pinned: !folderLabel?.pinned })}
-                          >
-                            {lang(folderLabel?.pinned ? 'XydriveUnpin' : 'XydrivePin')}
-                          </MenuItem>
-                          <MenuItem icon="folder" onClick={() => openFolderDialog('move')}>
-                            {lang('XydriveMoveFolder')}
-                          </MenuItem>
-                          <MenuItem destructive onClick={() => openFolderDialog('unmount')}>
-                            {lang('XydriveUnmount')}
-                          </MenuItem>
-                        </>
-                      ) : <MenuItem icon="arrow-right" onClick={onOpenSaved}>{lang('XydriveOpenSaved')}</MenuItem>}
-                      <MenuSeparator />
-                      <MenuItem icon="keyboard" onClick={() => setIsShortcutsOpen(true)}>
-                        {lang('XydriveShortcuts')}
-                      </MenuItem>
-                    </Menu>
-                  </div>
+                  )}
                 </>
               ) : (
                 <Button

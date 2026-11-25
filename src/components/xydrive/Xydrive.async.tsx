@@ -75,8 +75,8 @@ const XydriveAsync = ({
   }, [xydriveOwnerId, isOpen, closeXydrive]);
 
   useEffect(() => {
-    if (isOpen) loadXydrivePage();
-  }, [isOpen, sourceId, loadXydrivePage]);
+    if (isOpen && isSynced) loadXydrivePage();
+  }, [isOpen, isSynced, sourceId, loadXydrivePage]);
 
   const cloudDirty = useMemo(() => Boolean(isOpen && cloudBase && cloudBase.ownerId === currentUserId
     && !sameCloudSnapshot(cloudBase.snapshot, makeCloudSnapshot(folders || [], organization))),

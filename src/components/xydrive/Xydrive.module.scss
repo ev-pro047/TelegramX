@@ -246,10 +246,6 @@
   align-items: center;
 }
 
-.menuAnchor {
-  position: relative;
-}
-
 .more {
   cursor: pointer;
 
@@ -296,8 +292,18 @@
   white-space: nowrap;
 }
 
-.menuCreate {
-  display: none;
+.driveUtilities {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-block-start: 0.5rem;
+  padding-block-start: 0.5rem;
+  border-block-start: 1px solid var(--xydrive-divider);
+}
+
+.more:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .overview {
@@ -646,9 +652,6 @@
     font-size: 0.875rem;
   }
 
-  .menuCreate {
-    display: flex;
-  }
 }
 
 @media (max-width: 450px) {
