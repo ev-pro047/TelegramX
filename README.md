@@ -18,15 +18,32 @@ An independent, unofficial experimental client for Telegram.
 
 Web XY brings messaging and personal cloud file management together in one responsive web experience. It explores a productivity-focused approach while retaining the existing Telegram messaging and media foundations.
 
-<!-- Insert actual Web XY desktop screenshot here once available. -->
-
 ## Introducing Xydrive
 
 **Your files. Your folders. Your cloud.**
 
 Xydrive is a dedicated, full-page file-management workspace within the authenticated client. Enable **Xydrive Beta** in **Settings → Experimental**, then open **Xydrive** from the main menu.
 
-<!-- Insert actual Xydrive desktop screenshot here. -->
+### A look inside Web XY
+
+<div align="center">
+
+<table>
+  <tr>
+    <th width="33%">Open Xydrive</th>
+    <th width="33%">My Drive</th>
+    <th width="33%">Inside a folder</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="assets/readme/navigation.webp" width="240" alt="Xydrive Beta entry in the Web XY navigation menu"></td>
+    <td valign="top"><img src="assets/readme/my-drive.webp" width="240" alt="My Drive with folder cards, a photo thumbnail, search, upload and new folder controls"></td>
+    <td valign="top"><img src="assets/readme/folder-files.webp" width="240" alt="An open Xydrive folder with ZIP, JSON, TXT and PDF file cards"></td>
+  </tr>
+</table>
+
+<sub>Actual mobile screenshots from the running prototype, cropped for presentation.</sub>
+
+</div>
 
 | Capability | What Xydrive offers |
 | :--- | :--- |
@@ -39,7 +56,7 @@ Xydrive is a dedicated, full-page file-management workspace within the authentic
 | Cloud synchronization | Opt-in experimental synchronization of folder and organization metadata across devices. |
 | Adaptive interface | Responsive workspace layouts and existing theme integration. |
 
-<!-- Add actual folder, transfer and media screenshots here. Use paired mobile screenshots in light and dark themes when available. See assets/readme/SCREENSHOTS.md. -->
+<!-- Additional actual desktop, dark-theme and transfer screenshots may be added later. -->
 
 ## Native by design
 

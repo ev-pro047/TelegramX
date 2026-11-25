@@ -1,6 +1,6 @@
 # README screenshot assets
 
-Use actual screenshots of the running Web XY application, not generated mockups or GIFs. No screenshot files have been supplied yet; the README deliberately has no broken image links.
+Use actual screenshots of the running Web XY application, not generated mockups or GIFs. The README currently includes navigation.webp, my-drive.webp and folder-files.webp, cropped from real mobile screenshots. The navigation crop excludes the account header and chat list; the other two exclude browser chrome and the system navigation bar. Additional screenshots can be added below.
 
 | Filename | Capture |
 | --- | --- |
