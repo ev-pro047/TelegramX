@@ -67,6 +67,7 @@ import { getXydriveFile } from '../../../lib/xydrive/fileMetadata';
 import { isXydriveChannelEligible } from '../../../lib/xydrive/folders';
 import { getXydriveNextOffset } from '../../../lib/xydrive/pagination';
 import { XYDRIVE_REGISTRY_ABOUT, XYDRIVE_REGISTRY_TITLE } from '../../../lib/xydrive/cloud';
+import { getXydriveCloudBackoff, noteXydriveCloudBackoff } from './xydriveCloudBackoff';
 import { interpolateArray } from '../../../util/waveform';
 import { API_GENERAL_ID_LIMIT, PINNED_MESSAGES_LIMIT } from '../../../limits';
 import {
@@ -303,8 +304,13 @@ async function verifyPrivateRegistry(ownerId: string, channel: ApiChat) {
   return isXydriveCurrentAccount(ownerId) ? verified : undefined;
 }
 
+export async function getXydriveCloudRetryAfter({ ownerId }: { ownerId: string }) {
+  if (!isXydriveCurrentAccount(ownerId)) return undefined;
+  return Math.max(getXydriveCloudBackoff(), Math.ceil(xydriveRetryAt - getServerTime()), 0);
+}
+
 export async function readXydriveRegistry({ ownerId, channel }: { ownerId: string; channel: ApiChat }) {
-  if (xydriveRetryAt > getServerTime()) return undefined;
+  if (getXydriveCloudBackoff() || xydriveRetryAt > getServerTime()) return undefined;
   try {
     const verified = await verifyPrivateRegistry(ownerId, channel);
     if (!verified) return undefined;
@@ -332,6 +338,7 @@ export async function readXydriveRegistry({ ownerId, channel }: { ownerId: strin
       offsetId = next;
     }
   } catch (error) {
+    noteXydriveCloudBackoff(error);
     if (error instanceof FloodWaitError || error instanceof FloodTestPhoneWaitError) {
       xydriveRetryAt = getServerTime() + error.seconds;
     }
@@ -342,7 +349,7 @@ export async function readXydriveRegistry({ ownerId, channel }: { ownerId: strin
 export async function appendXydriveRegistry({
   ownerId, channel, records,
 }: { ownerId: string; channel: ApiChat; records: string[] }) {
-  if (xydriveRetryAt > getServerTime() || !records.length || records.length > 129
+  if (getXydriveCloudBackoff() || xydriveRetryAt > getServerTime() || !records.length || records.length > 129
     || records.some((record) => !record.startsWith('XYDRIVE_REGISTRY_V1 ') || record.length > 4096)) return false;
   try {
     for (const message of records) {
@@ -356,6 +363,7 @@ export async function appendXydriveRegistry({
     }
     return true;
   } catch (error) {
+    noteXydriveCloudBackoff(error);
     if (error instanceof FloodWaitError || error instanceof FloodTestPhoneWaitError) {
       xydriveRetryAt = getServerTime() + error.seconds;
     }

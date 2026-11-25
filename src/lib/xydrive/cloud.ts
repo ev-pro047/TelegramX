@@ -18,7 +18,7 @@ type Value = XydriveMount | string | XydriveFileLabel | XydriveFolderLabel | nul
 export type CloudChange = { key: Key; id: string; before: Value; after: Value };
 export type CloudBase = { ownerId: string; registryId: string; snapshot: CloudSnapshot; journalId: number };
 export type CloudSyncStatus = 'checking' | 'setup' | 'syncing' | 'synced' | 'error' | 'conflict'
-  | 'discovery-error' | 'registry-error' | 'creation-error' | 'write-error';
+  | 'discovery-error' | 'registry-error' | 'creation-error' | 'write-error' | 'wait-error';
 type Part = { owner: string; tx: string; part: number; total: number; data: string };
 type Commit = { owner: string; tx: string; commit: true; total: number };
 
@@ -197,4 +197,33 @@ export function verifyCloudCheckpoint(owner: string, records: { id: number; text
 
 export function cloudChangesConfirmed(snapshot: CloudSnapshot, changes: CloudChange[]) {
   return changes.every(({ key, id, after }) => stable(snapshot[key][id] ?? null) === stable(after));
+}
+
+const CLOUD_RETRY_DELAYS = [1500, 3500, 8000] as const;
+const MAX_SILENT_WAIT = 60_000;
+
+export function isCloudSyncError(status?: CloudSyncStatus) {
+  return Boolean(status && (status === 'error' || status.endsWith('-error')));
+}
+
+// A cycle is one initial attempt plus at most three retries. The caller
+// supplies the worker's remaining server-mandated cooldown, if any.
+export async function runCloudSyncWithRetries(
+  attempt: () => Promise<CloudSyncStatus>,
+  active: () => boolean,
+  wait: (ms: number) => Promise<unknown>,
+  getRetryAfter: () => Promise<number | undefined>,
+): Promise<CloudSyncStatus | undefined> {
+  for (let i = 0; i <= CLOUD_RETRY_DELAYS.length; i++) {
+    if (!active()) return undefined;
+    const result = await attempt();
+    if (!active()) return undefined;
+    if (!isCloudSyncError(result) || i === CLOUD_RETRY_DELAYS.length) return result;
+    const retryAfter = await getRetryAfter();
+    if (!active()) return undefined;
+    const serverDelay = Math.max(0, (retryAfter || 0) * 1000);
+    if (serverDelay > MAX_SILENT_WAIT) return 'wait-error';
+    await wait(Math.max(CLOUD_RETRY_DELAYS[i], serverDelay));
+  }
+  return undefined;
 }

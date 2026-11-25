@@ -103,6 +103,7 @@ import {
 } from './client';
 import { XYDRIVE_REGISTRY_ABOUT, XYDRIVE_REGISTRY_TITLE } from '../../../lib/xydrive/cloud';
 import { getPassword } from './twoFaSettings';
+import { getXydriveCloudBackoff, noteXydriveCloudBackoff } from './xydriveCloudBackoff';
 
 type FullChatData = {
   fullInfo: ApiChatFullInfo;
@@ -968,13 +969,28 @@ export function updateTopicMutedState({
 // A drive folder is an ordinary private broadcast channel, with no invited users.
 // Only explicitly requested registry creation is allowed; discovery must finish first.
 export async function createXydriveRegistry({ ownerId }: { ownerId: string }) {
-  if (!isXydriveCurrentAccount(ownerId)) return undefined;
-  return createChannel({
-    title: XYDRIVE_REGISTRY_TITLE, about: XYDRIVE_REGISTRY_ABOUT, isBroadcast: true,
-  });
+  if (!isXydriveCurrentAccount(ownerId) || getXydriveCloudBackoff()) return undefined;
+  try {
+    return await createChannel({
+      title: XYDRIVE_REGISTRY_TITLE, about: XYDRIVE_REGISTRY_ABOUT, isBroadcast: true,
+    });
+  } catch (error) {
+    noteXydriveCloudBackoff(error);
+    return undefined;
+  }
 }
 
 export async function discoverXydriveRegistry({ ownerId }: { ownerId: string }) {
+  if (getXydriveCloudBackoff()) return { status: 'error' as const };
+  try {
+    return await scanXydriveRegistry(ownerId);
+  } catch (error) {
+    noteXydriveCloudBackoff(error);
+    return { status: 'error' as const };
+  }
+}
+
+async function scanXydriveRegistry(ownerId: string) {
   const candidates = new Map<string, ApiChat>();
   const collect = (chats: GramJs.TypeChat[]) => {
     for (const raw of chats) {
@@ -987,7 +1003,7 @@ export async function discoverXydriveRegistry({ ownerId }: { ownerId: string }) 
   // and converts messages, so its pagination can lose a service-message cursor.
   for (const folderId of [ALL_FOLDER_ID, ARCHIVED_FOLDER_ID]) {
     if (!isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
-    const pinned = await invokeRequest(new GramJs.messages.GetPinnedDialogs({ folderId }));
+    const pinned = await invokeRequest(new GramJs.messages.GetPinnedDialogs({ folderId }), { shouldThrow: true });
     if (!pinned || !isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
     collect(pinned.chats);
     let offsetPeer: GramJs.TypeInputPeer = new GramJs.InputPeerEmpty();
@@ -1000,7 +1016,7 @@ export async function discoverXydriveRegistry({ ownerId }: { ownerId: string }) 
       const result = await invokeRequest(new GramJs.messages.GetDialogs({
         hash: DEFAULT_PRIMITIVES.BIGINT, folderId, excludePinned: true,
         offsetPeer, offsetId, offsetDate, limit: 100,
-      }));
+      }), { shouldThrow: true });
       if (!result || result instanceof GramJs.messages.DialogsNotModified
         || !isXydriveCurrentAccount(ownerId)) return { status: 'error' as const };
       collect(result.chats);

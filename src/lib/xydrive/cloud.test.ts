@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyCloudChanges, diffCloud, emptyCloudSnapshot, encodeCloudTransaction, replayCloudJournal, verifyCloudCheckpoint } from './cloud';
+import { applyCloudChanges, diffCloud, emptyCloudSnapshot, encodeCloudTransaction, replayCloudJournal, runCloudSyncWithRetries, verifyCloudCheckpoint } from './cloud';
 
 const owner = '1';
 const initial = emptyCloudSnapshot();
@@ -43,5 +43,46 @@ describe('Xydrive cloud metadata', () => {
     const messages = encodeCloudTransaction(owner, 'first', diffCloud(initial, next));
     expect(replayCloudJournal('2', records(messages))).toEqual({ status: 'conflict' });
     expect(applyCloudChanges(next, [{ key: 'parents', id: folder.id, before: null, after: '-1002' }])).toBeUndefined();
+  });
+});
+
+describe('silent cloud retries', () => {
+  it('makes three retries after the first failure, with increasing delays', async () => {
+    let attempts = 0;
+    const delays: number[] = [];
+    const result = await runCloudSyncWithRetries(async () => {
+      attempts++;
+      return 'registry-error';
+    }, () => true, async (ms) => { delays.push(ms); }, async () => 0);
+    expect(result).toBe('registry-error');
+    expect(attempts).toBe(4);
+    expect(delays).toEqual([1500, 3500, 8000]);
+  });
+
+  it('stops after a successful retry and never retries a conflict', async () => {
+    let attempts = 0;
+    const result = await runCloudSyncWithRetries(async () => {
+      attempts++;
+      return attempts === 1 ? 'write-error' : 'synced';
+    }, () => true, async () => {}, async () => 0);
+    expect(result).toBe('synced');
+    expect(attempts).toBe(2);
+    expect(await runCloudSyncWithRetries(async () => 'conflict', () => true, async () => {
+      throw Error('Conflict must not be retried');
+    }, async () => 0)).toBe('conflict');
+  });
+
+  it('honors Telegram cooldowns and stops after the account becomes inactive', async () => {
+    const delays: number[] = [];
+    let active = true;
+    const result = await runCloudSyncWithRetries(async () => 'discovery-error', () => active, async (ms) => {
+      delays.push(ms);
+      active = false;
+    }, async () => 10);
+    expect(result).toBeUndefined();
+    expect(delays).toEqual([10000]);
+    expect(await runCloudSyncWithRetries(async () => 'registry-error', () => true, async () => {
+      throw Error('Long flood wait must not retry');
+    }, async () => 120)).toBe('wait-error');
   });
 });

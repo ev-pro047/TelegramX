@@ -3591,6 +3591,7 @@ export interface LangPair {
   'XydriveCloudRegistryError': undefined;
   'XydriveCloudCreationError': undefined;
   'XydriveCloudWriteError': undefined;
+  'XydriveCloudWaitError': undefined;
   'XydriveCloudConflict': undefined;
   'XydriveBeta': undefined;
   'XydriveEnable': undefined;

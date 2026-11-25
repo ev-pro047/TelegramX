@@ -87,14 +87,14 @@ const XydriveAsync = ({
   }, [isOpen, isSynced, currentUserId, syncXydriveCloud]);
 
   useEffect(() => {
-    if (!isOpen || !isSynced || !cloudBase || cloudStatus === 'conflict' || cloudStatus === 'setup') return undefined;
+    if (!isOpen || !isSynced || !cloudBase || cloudStatus !== 'synced') return undefined;
     const timer = window.setInterval(() => syncXydriveCloud(), 120_000);
     return () => window.clearInterval(timer);
   }, [isOpen, isSynced, Boolean(cloudBase), cloudStatus, syncXydriveCloud]);
 
   useEffect(() => {
     if (!isOpen || !isSynced || !cloudDirty || cloudStatus !== 'synced') return undefined;
-    const timer = window.setTimeout(() => syncXydriveCloud(), 1500);
+    const timer = window.setTimeout(() => syncXydriveCloud({ afterMutation: true }), 100);
     return () => window.clearTimeout(timer);
   }, [isOpen, isSynced, cloudDirty, cloudStatus, folders, organization, syncXydriveCloud]);
 

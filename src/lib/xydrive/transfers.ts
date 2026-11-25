@@ -262,7 +262,13 @@ async function upload(job: Job) {
       ownerId: job.row.ownerId, chat, channel: context.folder && buildXydriveChannel(context.folder), attachment,
     }, callback);
     finish(job, status || 'unknown');
-    if (status === 'complete') void refreshFolder(job).catch(() => undefined);
+    if (status === 'complete') {
+      void refreshFolder(job).catch(() => undefined);
+      const latest = getContext(job);
+      if (latest && selectTabState(latest.global, job.row.tabId).xydriveOwnerId === job.row.ownerId) {
+        getActions().syncXydriveCloud({ tabId: job.row.tabId, afterMutation: true });
+      }
+    }
   } catch {
     finish(job, 'unknown');
   } finally {
