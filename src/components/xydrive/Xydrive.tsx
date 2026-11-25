@@ -315,7 +315,7 @@ const Xydrive = ({
           />
         )}
         <main className={styles.workspace} aria-label={lang('XydriveExplorer')}>
-          <header className={styles.toolbar}>
+          <header className={buildClassName(styles.toolbar, isDrive && styles.driveToolbar)}>
             <div className={styles.navigationActions}>
               <button
                 type="button"
@@ -380,22 +380,25 @@ const Xydrive = ({
                     className={styles.createButton}
                     color="translucent"
                     iconName="add"
+                    ariaLabel={lang('XydriveNewFolder')}
+                    noForcedUpperCase
                     noFastClick
                     disabled={createStatus === 'creating'}
                     onClick={() => openFolderDialog('create')}
                   >
-                    {lang('XydriveNewFolder')}
+                    <span className={styles.actionLabel}>{lang('XydriveNewFolder')}</span>
                   </Button>
                   <Button
                     size="smaller"
                     className={styles.uploadButton}
                     iconName="arrow-up-circle-filled"
                     ariaLabel={lang('XydriveUpload')}
+                    noForcedUpperCase
                     noFastClick
                     disabled={drive?.error === 'unavailable'}
                     onClick={() => uploadRef.current?.click()}
                   >
-                    <span className={styles.uploadLabel}>{lang('XydriveUpload')}</span>
+                    <span className={styles.actionLabel}>{lang('XydriveUpload')}</span>
                   </Button>
                   <div className={styles.menuAnchor}>
                     <button
