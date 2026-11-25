@@ -6,10 +6,6 @@
 
 **Beyond conversations.**
 
-[Documentation](docs/xydrive-workspace-revision.md) · [Deployment](docs/heroku.md) · [License](LICENSE)
-
-An independent, unofficial experimental client for Telegram.
-
 </div>
 
 ---
@@ -68,8 +64,8 @@ Xydrive reuses the authenticated Telegram session, native media viewer and trans
 
 - **Account-owned storage:** Saved Messages and eligible private channels.
 - **Native integration:** Telegram-managed upload limits, media access and transfer restrictions.
-- **Optional metadata sync:** A private broadcast channel stores organization metadata when explicitly enabled.
-- **Bounded indexing:** Storage analytics reflect known indexed file sizes, not a total cloud quota.
+- **Metadata sync:** A private broadcast channel stores organization metadata when explicitly enabled.
+
 
 ## Product philosophy
 
@@ -81,26 +77,11 @@ Xydrive reuses the authenticated Telegram session, native media viewer and trans
 
 **Transparency.** Make the storage model, limitations and project status clear.
 
-## Try the prototype
-
-Follow the [deployment guide](docs/heroku.md) to run the client on your own HTTPS origin using your Telegram application credentials. Never share personal session strings, login codes or passwords.
-
-Xydrive is a beta feature. Production and authenticated regression testing remain required. Cloud metadata sync is experimental and has not been validated across real devices; ordinary Telegram cloud chats are not end-to-end encrypted. Review the [cloud sync documentation](docs/xydrive-cloud-sync.md) and [organization limitations](docs/xydrive-organization.md) before using important files.
-
 ## The vision
 
 A distinct, productivity-focused web client that complements the Telegram ecosystem.
 
 **Proposed address:** `web.telegram.org/xy/`
-
-This address is a proposal only, subject to Telegram's review and approval. Web XY is not officially affiliated with or endorsed by Telegram.
-
-
-## Licence and upstream acknowledgement
-
-Web XY is based on [Telegram Web A (Ajaxy/telegram-tt)](https://github.com/Ajaxy/telegram-tt). Original authors and contributors retain their attribution. See [LICENSE](LICENSE) for the GPL-3.0-or-later terms and [CHANGELOG.md](CHANGELOG.md) for inherited upstream release history.
-
-See [security and release checks](docs/SECURITY.md) and the [documentation index](docs/README.md) for review scope and known limitations.
 
 <div align="center">
 <img src="assets/readme/footer.svg" alt="Web XY — Beyond conversations" width="100%">
